@@ -73,8 +73,7 @@ The frontend connects to your Freighter browser wallet, simulates transactions b
 
 ## 🔗 Deployed Smart Contract Link
 
-https://stellar.expert/explorer/public/contract/CDPN45ELKRJMMCSAVE2ZMQKKR3DICNMDO7I4MIF4CROYWUIDKYALAUXH
-
+https://stellar.expert/explorer/testnet/contract/CDPN45ELKRJMMCSAVE2ZMQKKR3DICNMDO7I4MIF4CROYWUIDKYALAUXH
 ---
 
 ## 📍 Addresses
