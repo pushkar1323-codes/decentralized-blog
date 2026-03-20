@@ -73,7 +73,17 @@ The frontend connects to your Freighter browser wallet, simulates transactions b
 
 ## 🔗 Deployed Smart Contract Link
 
+https://stellar.expert/explorer/public/contract/CDPN45ELKRJMMCSAVE2ZMQKKR3DICNMDO7I4MIF4CROYWUIDKYALAUXH
 
+---
+
+## 📍 Addresses
+
+**Contract Address (Soroban):**
+CDPN45ELKRJMMCSAVE2ZMQKKR3DICNMDO7I4MIF4CROYWUIDKYALAUXH
+
+**Freighter / Deployer Address:**
+GBMCURKBG6BHGRUY7BRAYTYJA5FXLIFG4F5AICOZL2IO3OOST3XVWQCJ
 
 ---
 
