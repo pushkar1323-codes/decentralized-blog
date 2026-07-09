@@ -64,10 +64,10 @@ export default function Home() {
       />
 
       {/* Hero + Content */}
-      <main className="relative z-10 flex flex-1 w-full max-w-5xl mx-auto flex-col items-center px-6 pt-10 pb-16">
+      <main className="relative z-10 flex flex-1 w-full max-w-5xl mx-auto flex-col items-center px-4 sm:px-6 pt-8 sm:pt-10 pb-16">
         {/* Hero — compact */}
         <div className="mb-10 text-center animate-fade-in-up">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5 text-sm text-white/50 backdrop-blur-sm">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5 text-sm text-white/50 backdrop-blur-sm">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#7c6cf0] opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-[#7c6cf0]" />
@@ -75,21 +75,21 @@ export default function Home() {
             Powered by Soroban on Stellar
           </div>
 
-          <h1 className="mb-3">
-            <span className="block text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]">
-              <span className="text-white">Supply Chain </span>
+          <h1 className="mb-4">
+            <span className="block text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]">
+              <span className="text-white">Publish Freely, </span>
               <span className="bg-gradient-to-r from-[#7c6cf0] via-[#4fc3f7] to-[#7c6cf0] bg-[length:200%_auto] animate-gradient-shift bg-clip-text text-transparent">
-                on the Blockchain
+                Own It Forever
               </span>
             </span>
           </h1>
 
           <p className="mx-auto max-w-lg text-sm sm:text-base leading-relaxed text-white/40">
-            Register products, track shipments, and verify authenticity — immutably on Stellar.
+            A permissionless blogging platform where every post and comment lives on-chain — no servers, no gatekeepers, no takedowns.
           </p>
 
           {/* Inline stats */}
-          <div className="mt-6 flex items-center justify-center gap-6 sm:gap-10 animate-fade-in-up-delayed">
+          <div className="mt-7 flex items-center justify-center gap-6 sm:gap-10 animate-fade-in-up-delayed">
             {[
               { label: "Finality", value: "~5s" },
               { label: "Cost", value: "<$0.01" },
@@ -97,7 +97,7 @@ export default function Home() {
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <p className="text-lg sm:text-xl font-bold text-white/90 font-mono">{stat.value}</p>
-                <p className="text-[10px] text-white/30 mt-0.5">{stat.label}</p>
+                <p className="text-[10px] text-white/30 mt-0.5 uppercase tracking-wider">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -111,10 +111,10 @@ export default function Home() {
         />
 
         {/* Footer */}
-        <div className="mt-10 flex flex-col items-center gap-4 animate-fade-in">
-          {/* Supply chain flow */}
+        <div className="mt-12 flex flex-col items-center gap-4 animate-fade-in">
+          {/* Publishing flow */}
           <div className="flex items-center gap-3 text-xs text-white/20">
-            {["Created", "Shipped", "Delivered"].map((step, i) => (
+            {["Write", "Publish", "Discuss"].map((step, i) => (
               <span key={step} className="flex items-center gap-3">
                 <span className="flex items-center gap-1.5">
                   <span
@@ -122,21 +122,21 @@ export default function Home() {
                       i === 0
                         ? "bg-[#fbbf24]/50"
                         : i === 1
-                          ? "bg-[#4fc3f7]/50"
-                          : "bg-[#34d399]/50"
+                          ? "bg-[#7c6cf0]/50"
+                          : "bg-[#4fc3f7]/50"
                     }`}
                   />
                   <span className="font-mono">{step}</span>
                 </span>
                 {i < 2 && (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/10">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/10" aria-hidden="true">
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
                 )}
               </span>
             ))}
           </div>
-          <div className="flex items-center gap-4 text-[10px] text-white/15">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[10px] text-white/15 px-4 text-center">
             <span>Stellar Network</span>
             <span className="h-2.5 w-px bg-white/10" />
             <span>Freighter Wallet</span>

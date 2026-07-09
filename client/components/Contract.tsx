@@ -95,15 +95,18 @@ function ClockIcon() {
 
 function Input({
   label,
+  id,
   ...props
 }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  const inputId = id ?? `field-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="space-y-2">
-      <label className="block text-[11px] font-medium uppercase tracking-wider text-white/30">
+      <label htmlFor={inputId} className="block text-[11px] font-medium uppercase tracking-wider text-white/30">
         {label}
       </label>
       <div className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-px transition-all focus-within:border-[#7c6cf0]/30 focus-within:shadow-[0_0_20px_rgba(124,108,240,0.08)]">
         <input
+          id={inputId}
           {...props}
           className="w-full rounded-[11px] bg-transparent px-4 py-3 font-mono text-sm text-white/90 placeholder:text-white/15 outline-none"
         />
@@ -114,15 +117,18 @@ function Input({
 
 function Textarea({
   label,
+  id,
   ...props
 }: { label: string } & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const inputId = id ?? `field-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="space-y-2">
-      <label className="block text-[11px] font-medium uppercase tracking-wider text-white/30">
+      <label htmlFor={inputId} className="block text-[11px] font-medium uppercase tracking-wider text-white/30">
         {label}
       </label>
       <div className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-px transition-all focus-within:border-[#7c6cf0]/30 focus-within:shadow-[0_0_20px_rgba(124,108,240,0.08)]">
         <textarea
+          id={inputId}
           {...props}
           rows={4}
           className="w-full rounded-[11px] bg-transparent px-4 py-3 font-mono text-sm text-white/90 placeholder:text-white/15 outline-none resize-none"
@@ -157,17 +163,20 @@ function PostCard({
   return (
     <button
       onClick={onSelect}
+      aria-current={isSelected}
       className={cn(
-        "w-full text-left p-4 rounded-xl border transition-all",
+        "w-full text-left p-4 rounded-xl border transition-all duration-200 ease-out",
+        "hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.995]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7c6cf0]/40",
         isSelected
-          ? "border-[#7c6cf0]/30 bg-[#7c6cf0]/[0.05]"
-          : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.03]"
+          ? "border-[#7c6cf0]/30 bg-[#7c6cf0]/[0.05] shadow-[0_4px_20px_rgba(124,108,240,0.06)]"
+          : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.03] hover:shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h4 className="font-medium text-white/90 truncate">{String(post.title)}</h4>
-          <p className="text-sm text-white/40 mt-1 line-clamp-2">{String(post.content)}</p>
+          <p className="text-sm text-white/40 mt-1 line-clamp-2 leading-relaxed">{String(post.content)}</p>
         </div>
         <Badge variant="info" className="shrink-0">
           <span className="h-1.5 w-1.5 rounded-full bg-[#4fc3f7]" />
@@ -205,15 +214,40 @@ function CommentItem({ comment }: { comment: Comment }) {
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     return `${Math.floor(diff / 86400)}d ago`;
   };
+  const author = String(comment.author);
 
   return (
-    <div className="flex gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+    <div className="flex gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04] transition-colors hover:bg-white/[0.03] animate-fade-in-up">
+      <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#4fc3f7]/30 to-[#7c6cf0]/30 text-[9px] font-bold text-white/70 font-mono">
+        {author.slice(0, 2)}
+      </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-medium text-white/50">{truncate(String(comment.author))}</span>
+          <span className="text-xs font-medium text-white/50">{truncate(author)}</span>
           <span className="text-xs text-white/20">{timeAgo(String(comment.timestamp))}</span>
         </div>
-        <p className="text-sm text-white/70">{String(comment.content)}</p>
+        <p className="text-sm text-white/70 leading-relaxed break-words">{String(comment.content)}</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Skeleton loaders ─────────────────────────────────────────
+
+function PostCardSkeleton() {
+  return (
+    <div className="w-full p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] animate-pulse">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="h-4 w-2/3 rounded bg-white/[0.06]" />
+          <div className="h-3 w-full rounded bg-white/[0.04]" />
+        </div>
+        <div className="h-5 w-10 shrink-0 rounded-full bg-white/[0.06]" />
+      </div>
+      <div className="flex items-center gap-4 mt-3">
+        <div className="h-3 w-16 rounded bg-white/[0.04]" />
+        <div className="h-3 w-10 rounded bg-white/[0.04]" />
+        <div className="h-3 w-6 rounded bg-white/[0.04]" />
       </div>
     </div>
   );
@@ -290,6 +324,13 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
     }
   }, []);
 
+  // Auto-dismiss error toasts after a while so stale errors don't linger forever
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), 6000);
+    return () => clearTimeout(t);
+  }, [error]);
+
   useEffect(() => {
     loadPosts();
   }, [loadPosts]);
@@ -365,18 +406,24 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
     <div className="w-full max-w-2xl animate-fade-in-up-delayed">
       {/* Toasts */}
       {error && (
-        <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#f87171]/15 bg-[#f87171]/[0.05] px-4 py-3 backdrop-blur-sm animate-slide-down">
+        <div role="alert" className="mb-4 flex items-start gap-3 rounded-xl border border-[#f87171]/15 bg-[#f87171]/[0.05] px-4 py-3 backdrop-blur-sm animate-slide-down">
           <span className="mt-0.5 text-[#f87171]"><AlertIcon /></span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-[#f87171]/90">Error</p>
-            <p className="text-xs text-[#f87171]/50 mt-0.5 break-all">{error}</p>
+            <p className="text-xs text-[#f87171]/50 mt-0.5 break-words">{error}</p>
           </div>
-          <button onClick={() => setError(null)} className="shrink-0 text-[#f87171]/30 hover:text-[#f87171]/70 text-lg leading-none">&times;</button>
+          <button
+            onClick={() => setError(null)}
+            aria-label="Dismiss error"
+            className="shrink-0 rounded p-0.5 text-[#f87171]/30 hover:text-[#f87171]/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f87171]/40 text-lg leading-none"
+          >
+            &times;
+          </button>
         </div>
       )}
 
       {txStatus && (
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-[#34d399]/15 bg-[#34d399]/[0.05] px-4 py-3 backdrop-blur-sm shadow-[0_0_30px_rgba(52,211,153,0.05)] animate-slide-down">
+        <div role="status" className="mb-4 flex items-center gap-3 rounded-xl border border-[#34d399]/15 bg-[#34d399]/[0.05] px-4 py-3 backdrop-blur-sm shadow-[0_0_30px_rgba(52,211,153,0.05)] animate-slide-down">
           <span className="text-[#34d399]">
             {txStatus.includes("on-chain") || txStatus.includes("added") ? <CheckIcon /> : <SpinnerIcon />}
           </span>
@@ -388,9 +435,9 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
       <Spotlight className="rounded-2xl">
         <AnimatedCard className="p-0" containerClassName="rounded-2xl">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#7c6cf0]/20 to-[#4fc3f7]/20 border border-white/[0.06]">
+          <div className="flex items-center justify-between border-b border-white/[0.06] px-4 sm:px-6 py-4 gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#7c6cf0]/20 to-[#4fc3f7]/20 border border-white/[0.06]">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#7c6cf0]">
                   <path d="M12 19l7-7 3 3-7 7-3-3z" />
                   <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
@@ -398,71 +445,94 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
                   <circle cx="11" cy="11" r="2" />
                 </svg>
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="text-sm font-semibold text-white/90">Decentralized Blog</h3>
-                <p className="text-[10px] text-white/25 font-mono mt-0.5">{truncate(CONTRACT_ADDRESS)}</p>
+                <p className="text-[10px] text-white/25 font-mono mt-0.5 truncate">{truncate(CONTRACT_ADDRESS)}</p>
               </div>
             </div>
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="p-2 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-all disabled:opacity-50"
+              aria-label="Refresh posts"
+              className="shrink-0 p-2 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-all disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7c6cf0]/40"
             >
-              <RefreshIcon />
+              <span className={cn("block", isRefreshing && "animate-spin")}>
+                <RefreshIcon />
+              </span>
             </button>
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-white/[0.06] px-2">
+          <div role="tablist" aria-label="Blog sections" className="flex border-b border-white/[0.06] px-1 sm:px-2 overflow-x-auto">
             {tabs.map((t) => (
               <button
                 key={t.key}
+                role="tab"
+                aria-selected={activeTab === t.key}
                 onClick={() => { setActiveTab(t.key); setError(null); }}
                 className={cn(
-                  "relative flex items-center gap-2 px-5 py-3.5 text-sm font-medium transition-all",
+                  "relative flex items-center gap-2 px-3.5 sm:px-5 py-3.5 text-sm font-medium transition-colors whitespace-nowrap",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#7c6cf0]/40",
                   activeTab === t.key ? "text-white/90" : "text-white/35 hover:text-white/55"
                 )}
               >
                 <span style={activeTab === t.key ? { color: t.color } : undefined}>{t.icon}</span>
                 {t.label}
-                {activeTab === t.key && (
-                  <span
-                    className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full transition-all"
-                    style={{ background: `linear-gradient(to right, ${t.color}, ${t.color}66)` }}
-                  />
-                )}
+                <span
+                  className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full transition-all duration-300 origin-center"
+                  style={{
+                    background: `linear-gradient(to right, ${t.color}, ${t.color}66)`,
+                    opacity: activeTab === t.key ? 1 : 0,
+                    transform: activeTab === t.key ? "scaleX(1)" : "scaleX(0.5)",
+                  }}
+                />
               </button>
             ))}
           </div>
 
           {/* Tab Content */}
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {/* Feed */}
             {activeTab === "feed" && (
               <div className="space-y-4">
                 <p className="text-xs text-white/30 font-medium uppercase tracking-wider">Latest Posts</p>
                 {isLoadingPosts ? (
-                  <div className="flex items-center justify-center py-12">
-                    <SpinnerIcon />
-                    <span className="ml-2 text-sm text-white/40">Loading posts...</span>
+                  <div className="space-y-3" aria-busy="true" aria-label="Loading posts">
+                    <PostCardSkeleton />
+                    <PostCardSkeleton />
+                    <PostCardSkeleton />
                   </div>
                 ) : posts.length === 0 ? (
-                  <div className="text-center py-12">
+                  <div className="flex flex-col items-center py-12 text-center">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.03] border border-white/[0.06] text-white/20">
+                      <PenIcon />
+                    </div>
                     <p className="text-white/40 text-sm">No posts yet</p>
                     <p className="text-white/20 text-xs mt-1">Be the first to write something!</p>
+                    <button
+                      onClick={() => setActiveTab("write")}
+                      className="mt-4 text-xs font-medium text-[#7c6cf0]/70 hover:text-[#7c6cf0] transition-colors focus-visible:outline-none focus-visible:underline"
+                    >
+                      Write the first post →
+                    </button>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {[...posts].reverse().map((post) => (
-                      <PostCard
+                    {[...posts].reverse().map((post, i) => (
+                      <div
                         key={String(post.id)}
-                        post={post}
-                        isSelected={selectedPostId === Number(post.id)}
-                        onSelect={() => {
-                          setSelectedPostId(Number(post.id));
-                          setActiveTab("view");
-                        }}
-                      />
+                        className="animate-fade-in-up"
+                        style={{ animationDelay: `${Math.min(i, 8) * 40}ms`, animationFillMode: "both" }}
+                      >
+                        <PostCard
+                          post={post}
+                          isSelected={selectedPostId === Number(post.id)}
+                          onSelect={() => {
+                            setSelectedPostId(Number(post.id));
+                            setActiveTab("view");
+                          }}
+                        />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -480,6 +550,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
                   placeholder="Your post title..."
                   maxLength={100}
                 />
+                <p className="text-xs text-white/20 text-right -mt-3">{postTitle.length}/100</p>
                 <Textarea
                   label="Content"
                   value={postContent}
@@ -489,7 +560,12 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
                 />
                 <p className="text-xs text-white/20 text-right">{postContent.length}/2000</p>
                 {walletAddress ? (
-                  <ShimmerButton onClick={handleCreatePost} disabled={isPosting} shimmerColor="#7c6cf0" className="w-full">
+                  <ShimmerButton
+                    onClick={handleCreatePost}
+                    disabled={isPosting || !postTitle.trim() || !postContent.trim()}
+                    shimmerColor="#7c6cf0"
+                    className="w-full"
+                  >
                     {isPosting ? <><SpinnerIcon /> Publishing...</> : <><PenIcon /> Publish Post</>}
                   </ShimmerButton>
                 ) : (
@@ -508,32 +584,39 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
             {activeTab === "view" && (
               <div className="space-y-5">
                 {selectedPostId === null ? (
-                  <div className="text-center py-12">
+                  <div className="flex flex-col items-center py-12 text-center">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.03] border border-white/[0.06] text-white/20">
+                      <MessageIcon />
+                    </div>
                     <p className="text-white/40 text-sm">Select a post to view</p>
                     <button
                       onClick={() => setActiveTab("feed")}
-                      className="mt-2 text-xs text-[#4fc3f7]/60 hover:text-[#4fc3f7]"
+                      className="mt-2 text-xs text-[#4fc3f7]/60 hover:text-[#4fc3f7] transition-colors focus-visible:outline-none focus-visible:underline"
                     >
                       Browse posts
                     </button>
                   </div>
                 ) : isLoadingPost ? (
-                  <div className="flex items-center justify-center py-12">
-                    <SpinnerIcon />
-                    <span className="ml-2 text-sm text-white/40">Loading post...</span>
+                  <div className="space-y-4 animate-pulse" aria-busy="true" aria-label="Loading post">
+                    <div className="h-5 w-2/3 rounded bg-white/[0.06]" />
+                    <div className="space-y-2">
+                      <div className="h-3 w-full rounded bg-white/[0.04]" />
+                      <div className="h-3 w-full rounded bg-white/[0.04]" />
+                      <div className="h-3 w-4/5 rounded bg-white/[0.04]" />
+                    </div>
                   </div>
                 ) : selectedPost ? (
                   <>
                     {/* Post Content */}
-                    <div>
+                    <div className="animate-fade-in-up">
                       <div className="flex items-start justify-between gap-4 mb-4">
-                        <h2 className="text-lg font-semibold text-white/90">{String(selectedPost.title)}</h2>
+                        <h2 className="text-lg sm:text-xl font-semibold text-white/90 break-words">{String(selectedPost.title)}</h2>
                         <Badge variant="info" className="shrink-0">
                           #{String(selectedPost.id)}
                         </Badge>
                       </div>
-                      <p className="text-white/60 text-sm leading-relaxed whitespace-pre-wrap">{String(selectedPost.content)}</p>
-                      <div className="flex items-center gap-4 mt-4 pt-4 border-t border-white/[0.06] text-xs text-white/25">
+                      <p className="text-white/60 text-sm leading-relaxed whitespace-pre-wrap break-words">{String(selectedPost.content)}</p>
+                      <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-white/[0.06] text-xs text-white/25">
                         <span className="flex items-center gap-1.5">
                           <UserIcon />
                           {truncate(String(selectedPost.author))}
@@ -554,9 +637,9 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
                       </div>
 
                       {isLoadingComments ? (
-                        <div className="flex items-center justify-center py-6">
-                          <SpinnerIcon />
-                          <span className="ml-2 text-xs text-white/40">Loading comments...</span>
+                        <div className="space-y-2 mb-4" aria-busy="true" aria-label="Loading comments">
+                          <div className="h-14 rounded-lg bg-white/[0.02] border border-white/[0.04] animate-pulse" />
+                          <div className="h-14 rounded-lg bg-white/[0.02] border border-white/[0.04] animate-pulse" />
                         </div>
                       ) : comments.length === 0 ? (
                         <p className="text-xs text-white/30 text-center py-4">No comments yet. Be the first!</p>
@@ -570,9 +653,11 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
 
                       {/* Add Comment */}
                       {walletAddress ? (
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           <div className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-px transition-all focus-within:border-[#4fc3f7]/30 focus-within:shadow-[0_0_20px_rgba(79,195,247,0.08)]">
+                            <label htmlFor="comment-content" className="sr-only">Comment</label>
                             <textarea
+                              id="comment-content"
                               value={commentContent}
                               onChange={(e) => setCommentContent(e.target.value)}
                               placeholder="Write a comment..."
@@ -581,6 +666,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
                               maxLength={500}
                             />
                           </div>
+                          <p className="text-xs text-white/20 text-right">{commentContent.length}/500</p>
                           <ShimmerButton
                             onClick={handleAddComment}
                             disabled={isPostingComment || !commentContent.trim()}
@@ -606,14 +692,19 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
                     </div>
                   </>
                 ) : (
-                  <p className="text-white/40 text-sm text-center">Post not found</p>
+                  <div className="flex flex-col items-center py-12 text-center">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.03] border border-white/[0.06] text-white/20">
+                      <AlertIcon />
+                    </div>
+                    <p className="text-white/40 text-sm">Post not found</p>
+                  </div>
                 )}
               </div>
             )}
           </div>
 
           {/* Footer */}
-          <div className="border-t border-white/[0.04] px-6 py-3 flex items-center justify-between">
+          <div className="border-t border-white/[0.04] px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
             <p className="text-[10px] text-white/15">Decentralized Blog &middot; Soroban</p>
             <p className="text-[10px] text-white/15">Permissionless &middot; On-chain</p>
           </div>

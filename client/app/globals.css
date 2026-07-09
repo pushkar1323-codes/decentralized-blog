@@ -104,3 +104,23 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* ── Accessibility: consistent keyboard focus ── */
+/* Components use focus-visible:ring-* utilities for their own focus states;
+   this is a safety net for any interactive element that doesn't. */
+:focus-visible {
+  outline: 2px solid rgba(124, 108, 240, 0.6);
+  outline-offset: 2px;
+}
+
+/* ── Reduced motion: respect user preference ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

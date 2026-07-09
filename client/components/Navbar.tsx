@@ -63,12 +63,19 @@ export default function Navbar({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click or Escape
   useEffect(() => {
     if (!showDropdown) return;
     const close = () => setShowDropdown(false);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowDropdown(false);
+    };
     document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [showDropdown]);
 
   const handleCopy = useCallback(async () => {
@@ -102,7 +109,7 @@ export default function Navbar({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-base font-semibold tracking-tight text-white">
-              SupplyTrack
+              Decentralized Blog
             </span>
             <span className="hidden sm:inline-block text-[10px] font-mono text-white/20 border border-white/[0.06] rounded px-1.5 py-0.5">
               v1.0
@@ -111,17 +118,21 @@ export default function Navbar({
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-3">
-          <Badge variant="success">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Badge variant="success" className="shrink-0">
             <span className="h-1.5 w-1.5 rounded-full bg-[#34d399] animate-pulse" />
-            {NETWORK}
+            <span className="hidden sm:inline">{NETWORK}</span>
+            <span className="sm:hidden">Live</span>
           </Badge>
 
           {walletAddress ? (
             <div className="relative">
               <button
                 onClick={(e) => { e.stopPropagation(); setShowDropdown(!showDropdown); }}
-                className="flex items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm transition-all hover:border-white/[0.15] hover:bg-white/[0.06]"
+                aria-haspopup="menu"
+                aria-expanded={showDropdown}
+                aria-label={`Wallet menu, connected as ${truncate(walletAddress)}`}
+                className="flex items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm transition-all hover:border-white/[0.15] hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7c6cf0]/50"
               >
                 <div className="h-6 w-6 rounded-full bg-gradient-to-br from-[#7c6cf0] to-[#4fc3f7] p-[1.5px]">
                   <div className="flex h-full w-full items-center justify-center rounded-full bg-[#0a0a1a] text-[8px] font-bold text-white/80">
@@ -142,7 +153,8 @@ export default function Navbar({
               {/* Dropdown */}
               {showDropdown && (
                 <div
-                  className="absolute right-0 top-full mt-2 w-64 overflow-hidden rounded-xl border border-white/[0.08] bg-[#0c0c1d]/95 backdrop-blur-2xl shadow-2xl animate-fade-in-up"
+                  role="menu"
+                  className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/[0.08] bg-[#0c0c1d]/95 backdrop-blur-2xl shadow-2xl animate-fade-in-up"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="p-3 border-b border-white/[0.06]">
@@ -176,7 +188,8 @@ export default function Navbar({
             <button
               onClick={onConnect}
               disabled={isConnecting}
-              className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#7c6cf0] to-[#5b8cf0] p-[1px] transition-all hover:shadow-[0_0_25px_rgba(124,108,240,0.25)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Connect wallet"
+              className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#7c6cf0] to-[#5b8cf0] p-[1px] transition-all hover:shadow-[0_0_25px_rgba(124,108,240,0.25)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7c6cf0]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050510]"
             >
               <div className="flex items-center gap-2 rounded-[11px] bg-[#0c0c1d]/90 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
                 {isConnecting ? (

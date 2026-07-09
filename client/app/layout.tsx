@@ -13,9 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Stellar Dapp",
+  title: "Decentralized Blog | Publish On-Chain on Stellar",
   description:
-    "Fullstack Dapp built on Stellar",
+    "A permissionless, on-chain blogging platform built with Soroban smart contracts on Stellar. Write posts, comment, and own your words — no servers, no censorship.",
+  themeColor: "#050510",
 };
 
 export default function RootLayout({
@@ -26,9 +27,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark scroll-smooth`}
     >
-      <body className="min-h-full flex flex-col bg-[#050510]">
+      <body className="min-h-full flex flex-col bg-[#050510] overflow-x-hidden selection:bg-[#7c6cf0]/30 selection:text-white">
         {children}
       </body>
     </html>
