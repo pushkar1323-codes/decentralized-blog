@@ -45,6 +45,9 @@ interface NavbarProps {
   onConnect: () => void;
   onDisconnect: () => void;
   isConnecting: boolean;
+  connectPhase?: "checking" | "requesting-access" | "finalizing" | null;
+  connectError?: string | null;
+  onDismissConnectError?: () => void;
 }
 
 export default function Navbar({
@@ -52,6 +55,9 @@ export default function Navbar({
   onConnect,
   onDisconnect,
   isConnecting,
+  connectPhase,
+  connectError,
+  onDismissConnectError,
 }: NavbarProps) {
   const [copied, setCopied] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -185,28 +191,72 @@ export default function Navbar({
               )}
             </div>
           ) : (
-            <button
-              onClick={onConnect}
-              disabled={isConnecting}
-              aria-label="Connect wallet"
-              className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#7c6cf0] to-[#5b8cf0] p-[1px] transition-all hover:shadow-[0_0_25px_rgba(124,108,240,0.25)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7c6cf0]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050510]"
-            >
-              <div className="flex items-center gap-2 rounded-[11px] bg-[#0c0c1d]/90 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
-                {isConnecting ? (
-                  <>
-                    <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                    </svg>
-                    Connecting...
-                  </>
-                ) : (
-                  <>
-                    <WalletIcon size={14} />
-                    Connect
-                  </>
-                )}
-              </div>
-            </button>
+            <div className="relative">
+              <button
+                onClick={onConnect}
+                disabled={isConnecting}
+                aria-label="Connect wallet"
+                className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#7c6cf0] to-[#5b8cf0] p-[1px] transition-all hover:shadow-[0_0_25px_rgba(124,108,240,0.25)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7c6cf0]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050510]"
+              >
+                <div className="flex items-center gap-2 rounded-[11px] bg-[#0c0c1d]/90 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
+                  {isConnecting ? (
+                    <>
+                      <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                      </svg>
+                      <span className="hidden sm:inline">
+                        {connectPhase === "checking" && "Checking Freighter..."}
+                        {connectPhase === "requesting-access" && "Approve in wallet..."}
+                        {connectPhase === "finalizing" && "Connecting..."}
+                        {!connectPhase && "Connecting..."}
+                      </span>
+                      <span className="sm:hidden">Connecting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <WalletIcon size={14} />
+                      Connect
+                    </>
+                  )}
+                </div>
+              </button>
+
+              {/* Connection failure notification */}
+              {connectError && !isConnecting && (
+                <div
+                  role="alert"
+                  className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-[#f87171]/20 bg-[#0c0c1d]/95 backdrop-blur-2xl p-3 shadow-2xl animate-fade-in-up"
+                >
+                  <div className="flex items-start gap-2.5">
+                    <span className="mt-0.5 shrink-0 text-[#f87171]">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-[#f87171]/90">Connection failed</p>
+                      <p className="text-xs text-white/40 mt-0.5 break-words leading-relaxed">{connectError}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <button
+                      onClick={onConnect}
+                      className="flex-1 rounded-lg bg-[#7c6cf0]/10 border border-[#7c6cf0]/20 px-3 py-1.5 text-xs font-medium text-[#7c6cf0]/90 hover:bg-[#7c6cf0]/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7c6cf0]/40"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      onClick={onDismissConnectError}
+                      className="rounded-lg px-3 py-1.5 text-xs text-white/30 hover:text-white/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

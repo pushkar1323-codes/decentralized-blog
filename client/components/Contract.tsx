@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   createPost,
   getPost,
@@ -257,16 +257,29 @@ function PostCardSkeleton() {
 
 type Tab = "feed" | "write" | "view";
 
+const TX_SUCCESS_MESSAGES = new Set([
+  "Post published on-chain!",
+  "Comment added!",
+]);
+
 interface ContractUIProps {
   walletAddress: string | null;
   onConnect: () => void;
   isConnecting: boolean;
+  connectPhase?: "checking" | "requesting-access" | "finalizing" | null;
 }
 
-export default function ContractUI({ walletAddress, onConnect, isConnecting }: ContractUIProps) {
+export default function ContractUI({ walletAddress, onConnect, isConnecting, connectPhase }: ContractUIProps) {
   const [activeTab, setActiveTab] = useState<Tab>("feed");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; retry?: () => void } | null>(null);
   const [txStatus, setTxStatus] = useState<string | null>(null);
+
+  const connectingLabel =
+    connectPhase === "checking"
+      ? "Checking Freighter..."
+      : connectPhase === "requesting-access"
+        ? "Approve in wallet..."
+        : "Connecting...";
 
   // Write post state
   const [postTitle, setPostTitle] = useState("");
@@ -287,6 +300,14 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Stable refs to the latest version of each retryable action. Retry
+  // callbacks read through these instead of closing over the function
+  // being defined (which would be a self-reference-before-declaration).
+  const loadPostsRef = useRef<() => void>(() => {});
+  const loadPostAndCommentsRef = useRef<(postId: number) => void>(() => {});
+  const handleCreatePostRef = useRef<() => void>(() => {});
+  const handleAddCommentRef = useRef<() => void>(() => {});
+
   const loadPosts = useCallback(async () => {
     setIsLoadingPosts(true);
     try {
@@ -296,6 +317,10 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
       }
     } catch (err) {
       console.error("Failed to load posts:", err);
+      setError({
+        message: "Failed to load posts from the network",
+        retry: () => loadPostsRef.current(),
+      });
     } finally {
       setIsLoadingPosts(false);
     }
@@ -317,7 +342,10 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
       }
     } catch (err) {
       console.error("Failed to load post:", err);
-      setError("Failed to load post");
+      setError({
+        message: "Failed to load post",
+        retry: () => loadPostAndCommentsRef.current(postId),
+      });
     } finally {
       setIsLoadingPost(false);
       setIsLoadingComments(false);
@@ -342,13 +370,18 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
   }, [selectedPostId, loadPostAndComments]);
 
   const handleCreatePost = useCallback(async () => {
-    if (!walletAddress) return setError("Connect wallet first");
-    if (!postTitle.trim() || !postContent.trim()) return setError("Fill in all fields");
+    if (!walletAddress) return setError({ message: "Connect wallet first" });
+    if (!postTitle.trim() || !postContent.trim())
+      return setError({ message: "Fill in all fields" });
     setError(null);
     setIsPosting(true);
-    setTxStatus("Awaiting signature...");
+    setTxStatus("Preparing transaction...");
     try {
-      await createPost(walletAddress, postTitle.trim(), postContent.trim());
+      await createPost(walletAddress, postTitle.trim(), postContent.trim(), (phase) => {
+        if (phase === "preparing") setTxStatus("Preparing transaction...");
+        if (phase === "signing") setTxStatus("Waiting for wallet signature...");
+        if (phase === "confirming") setTxStatus("Confirming on-chain...");
+      });
       setTxStatus("Post published on-chain!");
       setPostTitle("");
       setPostContent("");
@@ -356,7 +389,10 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
       loadPosts();
       setActiveTab("feed");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Transaction failed");
+      setError({
+        message: err instanceof Error ? err.message : "Transaction failed",
+        retry: () => handleCreatePostRef.current(),
+      });
       setTxStatus(null);
     } finally {
       setIsPosting(false);
@@ -364,34 +400,54 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
   }, [walletAddress, postTitle, postContent, loadPosts]);
 
   const handleAddComment = useCallback(async () => {
-    if (!walletAddress) return setError("Connect wallet first");
-    if (!commentContent.trim()) return setError("Enter a comment");
+    if (!walletAddress) return setError({ message: "Connect wallet first" });
+    if (!commentContent.trim()) return setError({ message: "Enter a comment" });
     if (selectedPostId === null) return;
     setError(null);
     setIsPostingComment(true);
-    setTxStatus("Awaiting signature...");
+    setTxStatus("Preparing transaction...");
     try {
-      await addComment(selectedPostId, walletAddress, commentContent.trim());
+      await addComment(selectedPostId, walletAddress, commentContent.trim(), (phase) => {
+        if (phase === "preparing") setTxStatus("Preparing transaction...");
+        if (phase === "signing") setTxStatus("Waiting for wallet signature...");
+        if (phase === "confirming") setTxStatus("Confirming on-chain...");
+      });
       setTxStatus("Comment added!");
       setCommentContent("");
       loadPostAndComments(selectedPostId);
       loadPosts();
       setTimeout(() => setTxStatus(null), 3000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Transaction failed");
+      setError({
+        message: err instanceof Error ? err.message : "Transaction failed",
+        retry: () => handleAddCommentRef.current(),
+      });
       setTxStatus(null);
     } finally {
       setIsPostingComment(false);
     }
   }, [walletAddress, commentContent, selectedPostId, loadPostAndComments, loadPosts]);
 
+  // Keep the retry refs pointed at the latest versions of these callbacks.
+  // Runs after render (not during), so it satisfies the rules-of-hooks
+  // linter that flagged the previous render-time ref mutation.
+  useEffect(() => {
+    loadPostsRef.current = loadPosts;
+    loadPostAndCommentsRef.current = loadPostAndComments;
+    handleCreatePostRef.current = handleCreatePost;
+    handleAddCommentRef.current = handleAddComment;
+  });
+
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await loadPosts();
-    if (selectedPostId !== null) {
-      await loadPostAndComments(selectedPostId);
+    try {
+      await loadPosts();
+      if (selectedPostId !== null) {
+        await loadPostAndComments(selectedPostId);
+      }
+    } finally {
+      setIsRefreshing(false);
     }
-    setIsRefreshing(false);
   }, [loadPosts, selectedPostId, loadPostAndComments]);
 
   const truncate = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -410,7 +466,15 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
           <span className="mt-0.5 text-[#f87171]"><AlertIcon /></span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-[#f87171]/90">Error</p>
-            <p className="text-xs text-[#f87171]/50 mt-0.5 break-words">{error}</p>
+            <p className="text-xs text-[#f87171]/50 mt-0.5 break-words">{error.message}</p>
+            {error.retry && (
+              <button
+                onClick={() => { const retry = error.retry; setError(null); retry?.(); }}
+                className="mt-2 text-xs font-medium text-[#f87171]/70 hover:text-[#f87171] underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f87171]/40 rounded"
+              >
+                Retry
+              </button>
+            )}
           </div>
           <button
             onClick={() => setError(null)}
@@ -425,7 +489,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
       {txStatus && (
         <div role="status" className="mb-4 flex items-center gap-3 rounded-xl border border-[#34d399]/15 bg-[#34d399]/[0.05] px-4 py-3 backdrop-blur-sm shadow-[0_0_30px_rgba(52,211,153,0.05)] animate-slide-down">
           <span className="text-[#34d399]">
-            {txStatus.includes("on-chain") || txStatus.includes("added") ? <CheckIcon /> : <SpinnerIcon />}
+            {TX_SUCCESS_MESSAGES.has(txStatus) ? <CheckIcon /> : <SpinnerIcon />}
           </span>
           <span className="text-sm text-[#34d399]/90">{txStatus}</span>
         </div>
@@ -566,15 +630,15 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
                     shimmerColor="#7c6cf0"
                     className="w-full"
                   >
-                    {isPosting ? <><SpinnerIcon /> Publishing...</> : <><PenIcon /> Publish Post</>}
+                    {isPosting ? <><SpinnerIcon /> {txStatus ?? "Publishing..."}</> : <><PenIcon /> Publish Post</>}
                   </ShimmerButton>
                 ) : (
                   <button
                     onClick={onConnect}
                     disabled={isConnecting}
-                    className="w-full rounded-xl border border-dashed border-[#7c6cf0]/20 bg-[#7c6cf0]/[0.03] py-4 text-sm text-[#7c6cf0]/60 hover:border-[#7c6cf0]/30 hover:text-[#7c6cf0]/80 active:scale-[0.99] transition-all disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-[#7c6cf0]/20 bg-[#7c6cf0]/[0.03] py-4 text-sm text-[#7c6cf0]/60 hover:border-[#7c6cf0]/30 hover:text-[#7c6cf0]/80 active:scale-[0.99] transition-all disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7c6cf0]/40"
                   >
-                    Connect wallet to publish
+                    {isConnecting ? <><SpinnerIcon /> {connectingLabel}</> : "Connect wallet to publish"}
                   </button>
                 )}
               </div>
@@ -674,7 +738,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
                             className="w-full"
                           >
                             {isPostingComment ? (
-                              <><SpinnerIcon /> Posting...</>
+                              <><SpinnerIcon /> {txStatus ?? "Posting..."}</>
                             ) : (
                               <><MessageIcon /> Add Comment</>
                             )}
@@ -684,9 +748,9 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting }: C
                         <button
                           onClick={onConnect}
                           disabled={isConnecting}
-                          className="w-full rounded-xl border border-dashed border-[#4fc3f7]/20 bg-[#4fc3f7]/[0.03] py-3 text-sm text-[#4fc3f7]/60 hover:border-[#4fc3f7]/30 hover:text-[#4fc3f7]/80 active:scale-[0.99] transition-all disabled:opacity-50"
+                          className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-[#4fc3f7]/20 bg-[#4fc3f7]/[0.03] py-3 text-sm text-[#4fc3f7]/60 hover:border-[#4fc3f7]/30 hover:text-[#4fc3f7]/80 active:scale-[0.99] transition-all disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4fc3f7]/40"
                         >
-                          Connect wallet to comment
+                          {isConnecting ? <><SpinnerIcon /> {connectingLabel}</> : "Connect wallet to comment"}
                         </button>
                       )}
                     </div>

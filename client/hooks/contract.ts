@@ -50,12 +50,18 @@ const server = new rpc.Server(RPC_URL);
 // Wallet Helpers
 // ============================================================
 
+/** Progress of a wallet-connection attempt, surfaced to the UI. */
+export type WalletPhase = "checking" | "requesting-access" | "finalizing";
+
 export async function checkConnection(): Promise<boolean> {
   const result = await isConnected();
   return result.isConnected;
 }
 
-export async function connectWallet(): Promise<string> {
+export async function connectWallet(
+  onPhase?: (phase: WalletPhase) => void
+): Promise<string> {
+  onPhase?.("checking");
   const connResult = await isConnected();
   if (!connResult.isConnected) {
     throw new Error("Freighter extension is not installed or not available.");
@@ -63,10 +69,12 @@ export async function connectWallet(): Promise<string> {
 
   const allowedResult = await isAllowed();
   if (!allowedResult.isAllowed) {
+    onPhase?.("requesting-access");
     await setAllowed();
     await requestAccess();
   }
 
+  onPhase?.("finalizing");
   const { address } = await getAddress();
   if (!address) {
     throw new Error("Could not retrieve wallet address from Freighter.");
@@ -93,6 +101,9 @@ export async function getWalletAddress(): Promise<string | null> {
 // Contract Interaction Helpers
 // ============================================================
 
+/** Fine-grained progress of an on-chain write transaction, surfaced to the UI. */
+export type TxPhase = "preparing" | "signing" | "confirming";
+
 /**
  * Build, simulate, and optionally sign + submit a Soroban contract call.
  *
@@ -100,14 +111,20 @@ export async function getWalletAddress(): Promise<string | null> {
  * @param params   - Array of xdr.ScVal parameters for the method
  * @param caller   - The public key (G...) of the calling account
  * @param sign     - If true, signs via Freighter and submits. If false, only simulates.
+ * @param onPhase  - Optional callback fired as the transaction moves through
+ *                   preparing → signing → confirming, so callers can render
+ *                   accurate progress ("Waiting for signature...", etc).
  * @returns        The result of the simulation or submission
  */
 export async function callContract(
   method: string,
   params: xdr.ScVal[] = [],
   caller: string,
-  sign: boolean = true
+  sign: boolean = true,
+  onPhase?: (phase: TxPhase) => void
 ) {
+  onPhase?.("preparing");
+
   const contract = new Contract(CONTRACT_ADDRESS);
   const account = await server.getAccount(caller);
 
@@ -135,7 +152,8 @@ export async function callContract(
   // Prepare the transaction with the simulation result
   const prepared = rpc.assembleTransaction(tx, simulated).build();
 
-  // Sign with Freighter
+  // Sign with Freighter — this is where the wallet extension prompts the user
+  onPhase?.("signing");
   const { signedTxXdr } = await signTransaction(prepared.toXDR(), {
     networkPassphrase: NETWORK_PASSPHRASE,
   });
@@ -145,17 +163,28 @@ export async function callContract(
     NETWORK_PASSPHRASE
   );
 
+  onPhase?.("confirming");
   const result = await server.sendTransaction(txToSubmit);
 
   if (result.status === "ERROR") {
     throw new Error(`Transaction submission failed: ${result.status}`);
   }
 
-  // Poll for confirmation
+  // Poll for confirmation, bounded so a stuck node can't hang the UI forever
+  const POLL_INTERVAL_MS = 1000;
+  const MAX_POLLS = 30; // ~30s, matches the tx's own setTimeout(30) validity window
   let getResult = await server.getTransaction(result.hash);
-  while (getResult.status === "NOT_FOUND") {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  let attempts = 0;
+  while (getResult.status === "NOT_FOUND" && attempts < MAX_POLLS) {
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
     getResult = await server.getTransaction(result.hash);
+    attempts++;
+  }
+
+  if (getResult.status === "NOT_FOUND") {
+    throw new Error(
+      "Timed out waiting for confirmation. The transaction may still complete — check back shortly before retrying."
+    );
   }
 
   if (getResult.status === "FAILED") {
@@ -242,13 +271,15 @@ export interface Comment {
 export async function createPost(
   caller: string,
   title: string,
-  content: string
+  content: string,
+  onPhase?: (phase: TxPhase) => void
 ) {
   return callContract(
     "create_post",
     [toScValAddress(caller), toScValString(title), toScValString(content)],
     caller,
-    true
+    true,
+    onPhase
   );
 }
 
@@ -271,13 +302,15 @@ export async function getPost(postId: number, caller?: string) {
 export async function addComment(
   postId: number,
   caller: string,
-  content: string
+  content: string,
+  onPhase?: (phase: TxPhase) => void
 ) {
   return callContract(
     "add_comment",
     [toScValU64(BigInt(postId)), toScValAddress(caller), toScValString(content)],
     caller,
-    true
+    true,
+    onPhase
   );
 }
 

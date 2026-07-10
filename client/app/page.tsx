@@ -8,11 +8,14 @@ import {
   connectWallet,
   getWalletAddress,
   checkConnection,
+  WalletPhase,
 } from "@/hooks/contract";
 
 export default function Home() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [connectPhase, setConnectPhase] = useState<WalletPhase | null>(null);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -29,12 +32,17 @@ export default function Home() {
 
   const handleConnect = useCallback(async () => {
     setIsConnecting(true);
+    setConnectError(null);
     try {
-      setWalletAddress(await connectWallet());
-    } catch {
-      // handled in Contract component
+      const addr = await connectWallet((phase) => setConnectPhase(phase));
+      setWalletAddress(addr);
+    } catch (err) {
+      setConnectError(
+        err instanceof Error ? err.message : "Failed to connect wallet."
+      );
     } finally {
       setIsConnecting(false);
+      setConnectPhase(null);
     }
   }, []);
 
@@ -61,6 +69,9 @@ export default function Home() {
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
         isConnecting={isConnecting}
+        connectPhase={connectPhase}
+        connectError={connectError}
+        onDismissConnectError={() => setConnectError(null)}
       />
 
       {/* Hero + Content */}
@@ -108,6 +119,7 @@ export default function Home() {
           walletAddress={walletAddress}
           onConnect={handleConnect}
           isConnecting={isConnecting}
+          connectPhase={connectPhase}
         />
 
         {/* Footer */}
