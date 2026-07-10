@@ -16,6 +16,7 @@ import { Spotlight } from "@/components/ui/spotlight";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { toFriendlyError } from "@/lib/errorMessages";
 
 // ── Icons ────────────────────────────────────────────────────
 
@@ -269,9 +270,15 @@ interface ContractUIProps {
   connectPhase?: "checking" | "requesting-access" | "finalizing" | null;
 }
 
+interface UIError {
+  title: string;
+  message: string;
+  retry?: () => void;
+}
+
 export default function ContractUI({ walletAddress, onConnect, isConnecting, connectPhase }: ContractUIProps) {
   const [activeTab, setActiveTab] = useState<Tab>("feed");
-  const [error, setError] = useState<{ message: string; retry?: () => void } | null>(null);
+  const [error, setError] = useState<UIError | null>(null);
   const [txStatus, setTxStatus] = useState<string | null>(null);
 
   const connectingLabel =
@@ -289,11 +296,15 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
   // View post state
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [postNotFound, setPostNotFound] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoadingPost, setIsLoadingPost] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [commentContent, setCommentContent] = useState("");
+  // Comments have their own inline error slot, separate from the global
+  // toast, so a failed comment fetch doesn't hide a post that loaded fine.
+  const [commentsError, setCommentsError] = useState<UIError | null>(null);
 
   // Feed state
   const [posts, setPosts] = useState<Post[]>([]);
@@ -304,7 +315,8 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
   // callbacks read through these instead of closing over the function
   // being defined (which would be a self-reference-before-declaration).
   const loadPostsRef = useRef<() => void>(() => {});
-  const loadPostAndCommentsRef = useRef<(postId: number) => void>(() => {});
+  const loadPostRef = useRef<(postId: number) => void>(() => {});
+  const loadCommentsRef = useRef<(postId: number) => void>(() => {});
   const handleCreatePostRef = useRef<() => void>(() => {});
   const handleAddCommentRef = useRef<() => void>(() => {});
 
@@ -317,37 +329,64 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
       }
     } catch (err) {
       console.error("Failed to load posts:", err);
+      const friendly = toFriendlyError(err, "We couldn't load the feed right now.");
       setError({
-        message: "Failed to load posts from the network",
-        retry: () => loadPostsRef.current(),
+        title: friendly.title,
+        message: friendly.message,
+        retry: friendly.retryable ? () => loadPostsRef.current() : undefined,
       });
     } finally {
       setIsLoadingPosts(false);
     }
   }, []);
 
-  const loadPostAndComments = useCallback(async (postId: number) => {
+  // Loads just the post itself. A missing post (contract returned nothing)
+  // is not an error — it's handled as its own "not found" state so the UI
+  // can say "this post doesn't exist" instead of a generic failure.
+  const loadPost = useCallback(async (postId: number) => {
     setIsLoadingPost(true);
-    setIsLoadingComments(true);
+    setPostNotFound(false);
     try {
       const postResult = await getPost(postId);
       if (postResult && typeof postResult === "object") {
         setSelectedPost(postResult as unknown as Post);
-      }
-      const commentsResult = await getComments(postId);
-      if (Array.isArray(commentsResult)) {
-        setComments(commentsResult as unknown as Comment[]);
       } else {
-        setComments([]);
+        setSelectedPost(null);
+        setPostNotFound(true);
       }
     } catch (err) {
       console.error("Failed to load post:", err);
+      setSelectedPost(null);
+      const friendly = toFriendlyError(err, "We couldn't load this post right now.");
       setError({
-        message: "Failed to load post",
-        retry: () => loadPostAndCommentsRef.current(postId),
+        title: friendly.title,
+        message: friendly.message,
+        retry: friendly.retryable ? () => loadPostRef.current(postId) : undefined,
       });
     } finally {
       setIsLoadingPost(false);
+    }
+  }, []);
+
+  // Loads just the comments for a post. Kept independent of loadPost so a
+  // comments-fetch hiccup shows a small inline retry instead of wiping out
+  // a post that already loaded successfully.
+  const loadComments = useCallback(async (postId: number) => {
+    setIsLoadingComments(true);
+    setCommentsError(null);
+    try {
+      const commentsResult = await getComments(postId);
+      setComments(Array.isArray(commentsResult) ? (commentsResult as unknown as Comment[]) : []);
+    } catch (err) {
+      console.error("Failed to load comments:", err);
+      const friendly = toFriendlyError(err, "We couldn't load comments right now.");
+      setComments([]);
+      setCommentsError({
+        title: friendly.title,
+        message: friendly.message,
+        retry: friendly.retryable ? () => loadCommentsRef.current(postId) : undefined,
+      });
+    } finally {
       setIsLoadingComments(false);
     }
   }, []);
@@ -365,14 +404,33 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
 
   useEffect(() => {
     if (selectedPostId !== null) {
-      loadPostAndComments(selectedPostId);
+      loadPost(selectedPostId);
+      loadComments(selectedPostId);
     }
-  }, [selectedPostId, loadPostAndComments]);
+  }, [selectedPostId, loadPost, loadComments]);
 
   const handleCreatePost = useCallback(async () => {
-    if (!walletAddress) return setError({ message: "Connect wallet first" });
-    if (!postTitle.trim() || !postContent.trim())
-      return setError({ message: "Fill in all fields" });
+    if (!walletAddress) {
+      return setError({
+        title: "Wallet required",
+        message: "Connect your wallet to publish a post.",
+      });
+    }
+    if (!postTitle.trim() && !postContent.trim()) {
+      return setError({
+        title: "Nothing to publish",
+        message: "Please add a title and some content before publishing.",
+      });
+    }
+    if (!postTitle.trim()) {
+      return setError({ title: "Title required", message: "Please add a title for your post." });
+    }
+    if (!postContent.trim()) {
+      return setError({
+        title: "Content required",
+        message: "Please write some content before publishing.",
+      });
+    }
     setError(null);
     setIsPosting(true);
     setTxStatus("Preparing transaction...");
@@ -389,9 +447,12 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
       loadPosts();
       setActiveTab("feed");
     } catch (err: unknown) {
+      console.error("Failed to create post:", err);
+      const friendly = toFriendlyError(err, "We couldn't publish your post. Please try again.");
       setError({
-        message: err instanceof Error ? err.message : "Transaction failed",
-        retry: () => handleCreatePostRef.current(),
+        title: friendly.title,
+        message: friendly.message,
+        retry: friendly.retryable ? () => handleCreatePostRef.current() : undefined,
       });
       setTxStatus(null);
     } finally {
@@ -400,8 +461,18 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
   }, [walletAddress, postTitle, postContent, loadPosts]);
 
   const handleAddComment = useCallback(async () => {
-    if (!walletAddress) return setError({ message: "Connect wallet first" });
-    if (!commentContent.trim()) return setError({ message: "Enter a comment" });
+    if (!walletAddress) {
+      return setError({
+        title: "Wallet required",
+        message: "Connect your wallet to leave a comment.",
+      });
+    }
+    if (!commentContent.trim()) {
+      return setError({
+        title: "Empty comment",
+        message: "Please write something before posting your comment.",
+      });
+    }
     if (selectedPostId === null) return;
     setError(null);
     setIsPostingComment(true);
@@ -414,26 +485,30 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
       });
       setTxStatus("Comment added!");
       setCommentContent("");
-      loadPostAndComments(selectedPostId);
+      loadComments(selectedPostId);
       loadPosts();
       setTimeout(() => setTxStatus(null), 3000);
     } catch (err: unknown) {
+      console.error("Failed to add comment:", err);
+      const friendly = toFriendlyError(err, "We couldn't post your comment. Please try again.");
       setError({
-        message: err instanceof Error ? err.message : "Transaction failed",
-        retry: () => handleAddCommentRef.current(),
+        title: friendly.title,
+        message: friendly.message,
+        retry: friendly.retryable ? () => handleAddCommentRef.current() : undefined,
       });
       setTxStatus(null);
     } finally {
       setIsPostingComment(false);
     }
-  }, [walletAddress, commentContent, selectedPostId, loadPostAndComments, loadPosts]);
+  }, [walletAddress, commentContent, selectedPostId, loadComments, loadPosts]);
 
   // Keep the retry refs pointed at the latest versions of these callbacks.
   // Runs after render (not during), so it satisfies the rules-of-hooks
   // linter that flagged the previous render-time ref mutation.
   useEffect(() => {
     loadPostsRef.current = loadPosts;
-    loadPostAndCommentsRef.current = loadPostAndComments;
+    loadPostRef.current = loadPost;
+    loadCommentsRef.current = loadComments;
     handleCreatePostRef.current = handleCreatePost;
     handleAddCommentRef.current = handleAddComment;
   });
@@ -443,12 +518,12 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
     try {
       await loadPosts();
       if (selectedPostId !== null) {
-        await loadPostAndComments(selectedPostId);
+        await Promise.all([loadPost(selectedPostId), loadComments(selectedPostId)]);
       }
     } finally {
       setIsRefreshing(false);
     }
-  }, [loadPosts, selectedPostId, loadPostAndComments]);
+  }, [loadPosts, selectedPostId, loadPost, loadComments]);
 
   const truncate = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
@@ -465,7 +540,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
         <div role="alert" className="mb-4 flex items-start gap-3 rounded-xl border border-[#f87171]/15 bg-[#f87171]/[0.05] px-4 py-3 backdrop-blur-sm animate-slide-down">
           <span className="mt-0.5 text-[#f87171]"><AlertIcon /></span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-[#f87171]/90">Error</p>
+            <p className="text-sm font-medium text-[#f87171]/90">{error.title}</p>
             <p className="text-xs text-[#f87171]/50 mt-0.5 break-words">{error.message}</p>
             {error.retry && (
               <button
@@ -705,6 +780,19 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                           <div className="h-14 rounded-lg bg-white/[0.02] border border-white/[0.04] animate-pulse" />
                           <div className="h-14 rounded-lg bg-white/[0.02] border border-white/[0.04] animate-pulse" />
                         </div>
+                      ) : commentsError ? (
+                        <div className="mb-4 rounded-lg border border-[#f87171]/15 bg-[#f87171]/[0.04] px-3 py-3 text-center">
+                          <p className="text-xs text-[#f87171]/80 font-medium">{commentsError.title}</p>
+                          <p className="text-xs text-[#f87171]/50 mt-0.5">{commentsError.message}</p>
+                          {commentsError.retry && (
+                            <button
+                              onClick={() => commentsError.retry?.()}
+                              className="mt-2 text-xs font-medium text-[#f87171]/70 hover:text-[#f87171] underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f87171]/40 rounded"
+                            >
+                              Retry
+                            </button>
+                          )}
+                        </div>
                       ) : comments.length === 0 ? (
                         <p className="text-xs text-white/30 text-center py-4">No comments yet. Be the first!</p>
                       ) : (
@@ -760,7 +848,15 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                     <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.03] border border-white/[0.06] text-white/20">
                       <AlertIcon />
                     </div>
-                    <p className="text-white/40 text-sm">Post not found</p>
+                    <p className="text-white/40 text-sm">
+                      {postNotFound ? "This post doesn't exist or may have been removed." : "Couldn't load this post."}
+                    </p>
+                    <button
+                      onClick={() => setActiveTab("feed")}
+                      className="mt-2 text-xs text-[#4fc3f7]/60 hover:text-[#4fc3f7] transition-colors focus-visible:outline-none focus-visible:underline"
+                    >
+                      Back to feed
+                    </button>
                   </div>
                 )}
               </div>

@@ -10,12 +10,13 @@ import {
   checkConnection,
   WalletPhase,
 } from "@/hooks/contract";
+import { toFriendlyError } from "@/lib/errorMessages";
 
 export default function Home() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectPhase, setConnectPhase] = useState<WalletPhase | null>(null);
-  const [connectError, setConnectError] = useState<string | null>(null);
+  const [connectError, setConnectError] = useState<{ title: string; message: string } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -37,9 +38,9 @@ export default function Home() {
       const addr = await connectWallet((phase) => setConnectPhase(phase));
       setWalletAddress(addr);
     } catch (err) {
-      setConnectError(
-        err instanceof Error ? err.message : "Failed to connect wallet."
-      );
+      console.error("Wallet connection failed:", err);
+      const friendly = toFriendlyError(err, "Failed to connect wallet.");
+      setConnectError({ title: friendly.title, message: friendly.message });
     } finally {
       setIsConnecting(false);
       setConnectPhase(null);
@@ -49,6 +50,46 @@ export default function Home() {
   const handleDisconnect = useCallback(() => {
     setWalletAddress(null);
   }, []);
+
+  // If the wallet was disconnected/locked outside the app (e.g. directly in
+  // the Freighter extension) while we still think we're connected, notice
+  // next time the tab regains focus and reflect that honestly instead of
+  // letting Publish/Comment silently fail later.
+  useEffect(() => {
+    if (!walletAddress) return;
+    const recheck = async () => {
+      try {
+        const stillConnected = await checkConnection();
+        if (!stillConnected) {
+          setWalletAddress(null);
+          setConnectError({
+            title: "Wallet disconnected",
+            message: "Your wallet was disconnected. Please reconnect to continue.",
+          });
+          return;
+        }
+        const addr = await getWalletAddress();
+        if (!addr) {
+          setWalletAddress(null);
+          setConnectError({
+            title: "Wallet disconnected",
+            message: "Your wallet was disconnected. Please reconnect to continue.",
+          });
+        }
+      } catch {
+        /* Freighter unreachable — leave current state as-is rather than guess */
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") recheck();
+    };
+    window.addEventListener("focus", recheck);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", recheck);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [walletAddress]);
 
   return (
     <div className="relative flex flex-col min-h-screen bg-[#050510] overflow-hidden">

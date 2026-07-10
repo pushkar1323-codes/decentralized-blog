@@ -46,7 +46,7 @@ interface NavbarProps {
   onDisconnect: () => void;
   isConnecting: boolean;
   connectPhase?: "checking" | "requesting-access" | "finalizing" | null;
-  connectError?: string | null;
+  connectError?: { title: string; message: string } | null;
   onDismissConnectError?: () => void;
 }
 
@@ -236,8 +236,8 @@ export default function Navbar({
                       </svg>
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-[#f87171]/90">Connection failed</p>
-                      <p className="text-xs text-white/40 mt-0.5 break-words leading-relaxed">{connectError}</p>
+                      <p className="text-xs font-medium text-[#f87171]/90">{connectError.title}</p>
+                      <p className="text-xs text-white/40 mt-0.5 break-words leading-relaxed">{connectError.message}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-3">

@@ -19,6 +19,7 @@ import {
   isAllowed,
   requestAccess,
 } from "@stellar/freighter-api";
+import { USER_REJECTED_PREFIX } from "@/lib/errorMessages";
 
 // ============================================================
 // CONSTANTS — Update these for your contract
@@ -71,15 +72,23 @@ export async function connectWallet(
   if (!allowedResult.isAllowed) {
     onPhase?.("requesting-access");
     await setAllowed();
-    await requestAccess();
+    const accessResult = await requestAccess();
+    if (accessResult.error) {
+      throw new Error(
+        `${USER_REJECTED_PREFIX} ${accessResult.error.message || "Wallet access request was declined."}`
+      );
+    }
   }
 
   onPhase?.("finalizing");
-  const { address } = await getAddress();
-  if (!address) {
-    throw new Error("Could not retrieve wallet address from Freighter.");
+  const addressResult = await getAddress();
+  if (!addressResult.address) {
+    throw new Error(
+      addressResult.error?.message ||
+        "Could not retrieve wallet address from Freighter."
+    );
   }
-  return address;
+  return addressResult.address;
 }
 
 export async function getWalletAddress(): Promise<string | null> {
@@ -154,12 +163,18 @@ export async function callContract(
 
   // Sign with Freighter — this is where the wallet extension prompts the user
   onPhase?.("signing");
-  const { signedTxXdr } = await signTransaction(prepared.toXDR(), {
+  const signResult = await signTransaction(prepared.toXDR(), {
     networkPassphrase: NETWORK_PASSPHRASE,
   });
 
+  if (signResult.error) {
+    throw new Error(
+      `${USER_REJECTED_PREFIX} ${signResult.error.message || "Transaction signing was declined."}`
+    );
+  }
+
   const txToSubmit = TransactionBuilder.fromXDR(
-    signedTxXdr,
+    signResult.signedTxXdr,
     NETWORK_PASSPHRASE
   );
 
