@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { Meteors } from "@/components/ui/meteors";
 import Navbar from "@/components/Navbar";
 import ContractUI from "@/components/Contract";
@@ -11,6 +12,7 @@ import {
   WalletPhase,
 } from "@/hooks/contract";
 import { toFriendlyError } from "@/lib/errorMessages";
+import { track, AnalyticsEvent, identifyWallet, resetAnalyticsIdentity } from "@/lib/analytics";
 
 export default function Home() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -23,7 +25,10 @@ export default function Home() {
       try {
         if (await checkConnection()) {
           const addr = await getWalletAddress();
-          if (addr) setWalletAddress(addr);
+          if (addr) {
+            setWalletAddress(addr);
+            identifyWallet(addr);
+          }
         }
       } catch {
         /* Freighter not installed */
@@ -37,8 +42,11 @@ export default function Home() {
     try {
       const addr = await connectWallet((phase) => setConnectPhase(phase));
       setWalletAddress(addr);
+      identifyWallet(addr);
+      track(AnalyticsEvent.WALLET_CONNECTED, { wallet_address: addr });
     } catch (err) {
       console.error("Wallet connection failed:", err);
+      Sentry.captureException(err, { tags: { flow: "wallet_connect" } });
       const friendly = toFriendlyError(err, "Failed to connect wallet.");
       setConnectError({ title: friendly.title, message: friendly.message });
     } finally {
@@ -49,6 +57,7 @@ export default function Home() {
 
   const handleDisconnect = useCallback(() => {
     setWalletAddress(null);
+    resetAnalyticsIdentity();
   }, []);
 
   // If the wallet was disconnected/locked outside the app (e.g. directly in

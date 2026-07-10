@@ -17,6 +17,8 @@ import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toFriendlyError } from "@/lib/errorMessages";
+import { track, AnalyticsEvent } from "@/lib/analytics";
+import * as Sentry from "@sentry/nextjs";
 
 // ── Icons ────────────────────────────────────────────────────
 
@@ -329,6 +331,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
       }
     } catch (err) {
       console.error("Failed to load posts:", err);
+      Sentry.captureException(err, { tags: { flow: "load_posts" } });
       const friendly = toFriendlyError(err, "We couldn't load the feed right now.");
       setError({
         title: friendly.title,
@@ -356,6 +359,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
       }
     } catch (err) {
       console.error("Failed to load post:", err);
+      Sentry.captureException(err, { tags: { flow: "load_post" }, extra: { postId } });
       setSelectedPost(null);
       const friendly = toFriendlyError(err, "We couldn't load this post right now.");
       setError({
@@ -379,6 +383,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
       setComments(Array.isArray(commentsResult) ? (commentsResult as unknown as Comment[]) : []);
     } catch (err) {
       console.error("Failed to load comments:", err);
+      Sentry.captureException(err, { tags: { flow: "load_comments" }, extra: { postId } });
       const friendly = toFriendlyError(err, "We couldn't load comments right now.");
       setComments([]);
       setCommentsError({
@@ -441,6 +446,11 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
         if (phase === "confirming") setTxStatus("Confirming on-chain...");
       });
       setTxStatus("Post published on-chain!");
+      track(AnalyticsEvent.BLOG_PUBLISHED, {
+        wallet_address: walletAddress,
+        title_length: postTitle.trim().length,
+        content_length: postContent.trim().length,
+      });
       setPostTitle("");
       setPostContent("");
       setTimeout(() => setTxStatus(null), 5000);
@@ -448,6 +458,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
       setActiveTab("feed");
     } catch (err: unknown) {
       console.error("Failed to create post:", err);
+      Sentry.captureException(err, { tags: { flow: "create_post", type: "blockchain_transaction" } });
       const friendly = toFriendlyError(err, "We couldn't publish your post. Please try again.");
       setError({
         title: friendly.title,
@@ -484,12 +495,18 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
         if (phase === "confirming") setTxStatus("Confirming on-chain...");
       });
       setTxStatus("Comment added!");
+      track(AnalyticsEvent.COMMENT_ADDED, {
+        wallet_address: walletAddress,
+        post_id: selectedPostId,
+        content_length: commentContent.trim().length,
+      });
       setCommentContent("");
       loadComments(selectedPostId);
       loadPosts();
       setTimeout(() => setTxStatus(null), 3000);
     } catch (err: unknown) {
       console.error("Failed to add comment:", err);
+      Sentry.captureException(err, { tags: { flow: "add_comment", type: "blockchain_transaction" } });
       const friendly = toFriendlyError(err, "We couldn't post your comment. Please try again.");
       setError({
         title: friendly.title,
@@ -669,6 +686,10 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                           onSelect={() => {
                             setSelectedPostId(Number(post.id));
                             setActiveTab("view");
+                            track(AnalyticsEvent.BLOG_VIEWED, {
+                              post_id: Number(post.id),
+                              wallet_address: walletAddress,
+                            });
                           }}
                         />
                       </div>
