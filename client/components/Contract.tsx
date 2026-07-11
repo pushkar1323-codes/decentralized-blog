@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, memo } from "react";
 import {
   createPost,
   getPost,
@@ -141,31 +141,39 @@ function Textarea({
   );
 }
 
+// ── Shared helpers ───────────────────────────────────────────
+// Pure functions with no dependency on component state/props, so they're
+// defined once at module scope instead of being recreated on every render
+// of every PostCard/CommentItem (previously duplicated 3x across the file).
+
+function truncateAddress(addr: string) {
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+}
+
+function timeAgo(timestamp: string) {
+  const ts = Number(timestamp);
+  const now = Math.floor(Date.now() / 1000);
+  const diff = now - ts;
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
 // ── Post Card ─────────────────────────────────────────────────
 
-function PostCard({ 
-  post, 
+const PostCard = memo(function PostCard({
+  post,
   onSelect,
-  isSelected 
-}: { 
-  post: Post; 
-  onSelect: () => void;
+  isSelected
+}: {
+  post: Post;
+  onSelect: (id: number) => void;
   isSelected: boolean;
 }) {
-  const truncate = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  const timeAgo = (timestamp: string) => {
-    const ts = Number(timestamp);
-    const now = Math.floor(Date.now() / 1000);
-    const diff = now - ts;
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-  };
-
   return (
     <button
-      onClick={onSelect}
+      onClick={() => onSelect(Number(post.id))}
       aria-current={isSelected}
       className={cn(
         "w-full text-left p-4 rounded-xl border transition-all duration-200 ease-out",
@@ -189,7 +197,7 @@ function PostCard({
       <div className="flex items-center gap-4 mt-3 text-xs text-white/25">
         <span className="flex items-center gap-1.5">
           <UserIcon />
-          {truncate(String(post.author))}
+          {truncateAddress(String(post.author))}
         </span>
         <span className="flex items-center gap-1.5">
           <ClockIcon />
@@ -202,21 +210,11 @@ function PostCard({
       </div>
     </button>
   );
-}
+});
 
 // ── Comment Item ─────────────────────────────────────────────
 
-function CommentItem({ comment }: { comment: Comment }) {
-  const truncate = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  const timeAgo = (timestamp: string) => {
-    const ts = Number(timestamp);
-    const now = Math.floor(Date.now() / 1000);
-    const diff = now - ts;
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-  };
+const CommentItem = memo(function CommentItem({ comment }: { comment: Comment }) {
   const author = String(comment.author);
 
   return (
@@ -226,14 +224,14 @@ function CommentItem({ comment }: { comment: Comment }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-medium text-white/50">{truncate(author)}</span>
+          <span className="text-xs font-medium text-white/50">{truncateAddress(author)}</span>
           <span className="text-xs text-white/20">{timeAgo(String(comment.timestamp))}</span>
         </div>
         <p className="text-sm text-white/70 leading-relaxed break-words">{String(comment.content)}</p>
       </div>
     </div>
   );
-}
+});
 
 // ── Skeleton loaders ─────────────────────────────────────────
 
@@ -264,6 +262,12 @@ const TX_SUCCESS_MESSAGES = new Set([
   "Post published on-chain!",
   "Comment added!",
 ]);
+
+const TABS: { key: Tab; label: string; icon: React.ReactNode; color: string }[] = [
+  { key: "feed", label: "Feed", icon: <MessageIcon />, color: "#4fc3f7" },
+  { key: "write", label: "Write", icon: <PenIcon />, color: "#7c6cf0" },
+  { key: "view", label: "View", icon: <RefreshIcon />, color: "#fbbf24" },
+];
 
 interface ContractUIProps {
   walletAddress: string | null;
@@ -542,13 +546,26 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
     }
   }, [loadPosts, selectedPostId, loadPost, loadComments]);
 
-  const truncate = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  // Stable callback passed to every PostCard. Combined with the memoized
+  // reversedPosts list below and React.memo on PostCard, this means
+  // clicking a post (or any unrelated state change elsewhere in this
+  // component, like typing in the Write tab) doesn't force every other
+  // PostCard to re-render — only the newly- and previously-selected cards
+  // actually receive new props.
+  const handleSelectPost = useCallback(
+    (id: number) => {
+      setSelectedPostId(id);
+      setActiveTab("view");
+      track(AnalyticsEvent.BLOG_VIEWED, { post_id: id, wallet_address: walletAddress });
+    },
+    [walletAddress]
+  );
 
-  const tabs: { key: Tab; label: string; icon: React.ReactNode; color: string }[] = [
-    { key: "feed", label: "Feed", icon: <MessageIcon />, color: "#4fc3f7" },
-    { key: "write", label: "Write", icon: <PenIcon />, color: "#7c6cf0" },
-    { key: "view", label: "View", icon: <RefreshIcon />, color: "#fbbf24" },
-  ];
+  // Recomputed only when `posts` actually changes (new fetch), instead of
+  // on every render of this component — e.g. previously, typing a single
+  // character into the Write tab's title field would re-run
+  // [...posts].reverse() and remap the whole array again for no reason.
+  const reversedPosts = useMemo(() => [...posts].reverse(), [posts]);
 
   return (
     <div className="w-full max-w-2xl animate-fade-in-up-delayed">
@@ -603,7 +620,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
               </div>
               <div className="min-w-0">
                 <h3 className="text-sm font-semibold text-white/90">Decentralized Blog</h3>
-                <p className="text-[10px] text-white/25 font-mono mt-0.5 truncate">{truncate(CONTRACT_ADDRESS)}</p>
+                <p className="text-[10px] text-white/25 font-mono mt-0.5 truncate">{truncateAddress(CONTRACT_ADDRESS)}</p>
               </div>
             </div>
             <button
@@ -620,7 +637,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
 
           {/* Tabs */}
           <div role="tablist" aria-label="Blog sections" className="flex border-b border-white/[0.06] px-1 sm:px-2 overflow-x-auto">
-            {tabs.map((t) => (
+            {TABS.map((t) => (
               <button
                 key={t.key}
                 role="tab"
@@ -674,7 +691,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {[...posts].reverse().map((post, i) => (
+                    {reversedPosts.map((post, i) => (
                       <div
                         key={String(post.id)}
                         className="animate-fade-in-up"
@@ -683,14 +700,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                         <PostCard
                           post={post}
                           isSelected={selectedPostId === Number(post.id)}
-                          onSelect={() => {
-                            setSelectedPostId(Number(post.id));
-                            setActiveTab("view");
-                            track(AnalyticsEvent.BLOG_VIEWED, {
-                              post_id: Number(post.id),
-                              wallet_address: walletAddress,
-                            });
-                          }}
+                          onSelect={handleSelectPost}
                         />
                       </div>
                     ))}
@@ -779,7 +789,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                       <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-white/[0.06] text-xs text-white/25">
                         <span className="flex items-center gap-1.5">
                           <UserIcon />
-                          {truncate(String(selectedPost.author))}
+                          {truncateAddress(String(selectedPost.author))}
                         </span>
                         <span className="flex items-center gap-1.5">
                           <ClockIcon />

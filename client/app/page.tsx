@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import * as Sentry from "@sentry/nextjs";
 import { Meteors } from "@/components/ui/meteors";
 import Navbar from "@/components/Navbar";
-import ContractUI from "@/components/Contract";
 import {
   connectWallet,
   getWalletAddress,
@@ -13,6 +13,28 @@ import {
 } from "@/hooks/contract";
 import { toFriendlyError } from "@/lib/errorMessages";
 import { track, AnalyticsEvent, identifyWallet, resetAnalyticsIdentity } from "@/lib/analytics";
+
+// Code-split: this is the largest component in the app and has no
+// server-renderable content of its own (its data is always fetched
+// client-side after mount), so there's nothing lost by loading its JS
+// as a separate chunk instead of bundling it into the initial page load.
+// The skeleton below mirrors the real card's shape/size to avoid layout
+// shift once the real component takes over.
+const ContractUI = dynamic(() => import("@/components/Contract"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full max-w-2xl animate-pulse">
+      <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.05] to-white/[0.02] p-6">
+        <div className="h-8 w-40 rounded-lg bg-white/[0.06] mb-6" />
+        <div className="space-y-3">
+          <div className="h-16 rounded-xl bg-white/[0.04]" />
+          <div className="h-16 rounded-xl bg-white/[0.04]" />
+          <div className="h-16 rounded-xl bg-white/[0.04]" />
+        </div>
+      </div>
+    </div>
+  ),
+});
 
 export default function Home() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);

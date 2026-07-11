@@ -1,6 +1,6 @@
 "use client";
 
-import posthog from "posthog-js";
+import type { PostHog } from "posthog-js";
 
 /**
  * Every analytics event this app knows about. Defining them as a const
@@ -26,40 +26,58 @@ export const AnalyticsEvent = {
 
 export type AnalyticsEventName = (typeof AnalyticsEvent)[keyof typeof AnalyticsEvent];
 
-let initialized = false;
+let posthogInstance: PostHog | null = null;
+let initPromise: Promise<void> | null = null;
 
 /**
- * Initializes PostHog once, client-side only. Safe to call multiple times
- * (e.g. from React StrictMode's double-invoke in dev) — subsequent calls
- * are no-ops. If NEXT_PUBLIC_POSTHOG_KEY isn't set, this does nothing and
- * every track() call below becomes a silent no-op too, so the app behaves
- * identically whether or not analytics is configured.
+ * Initializes PostHog once, client-side only, loading the library itself
+ * via a dynamic import() rather than a static top-level one. posthog-js's
+ * default bundle entry point is ~224KB of raw source — substantial enough
+ * that it shouldn't block/inflate the app's initial JS bundle, especially
+ * since it does nothing at all until NEXT_PUBLIC_POSTHOG_KEY is configured.
+ * The dynamic import lets Next.js split it into its own chunk that loads
+ * in parallel instead of delaying the initial page's parse/hydration.
+ *
+ * Safe to call multiple times (e.g. React StrictMode's double-invoke in
+ * dev) — subsequent calls reuse the in-flight/completed promise.
  */
-export function initAnalytics() {
-  if (initialized || typeof window === "undefined") return;
+export function initAnalytics(): Promise<void> {
+  if (initPromise) return initPromise;
 
-  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  if (!key) return;
+  initPromise = (async () => {
+    if (typeof window === "undefined") return;
 
-  posthog.init(key, {
-    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
-    // This is a wallet-based dapp with one page and no traditional login,
-    // so we capture pageviews manually rather than relying on history-API
-    // autocapture, which mostly matters for multi-route apps.
-    capture_pageview: false,
-    // Session recordings aren't needed for this scope; keep the footprint
-    // small and rely on named events instead.
-    disable_session_recording: true,
-    persistence: "localStorage+cookie",
-  });
+    const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    if (!key) return;
 
-  initialized = true;
+    const { default: posthog } = await import("posthog-js");
+
+    posthog.init(key, {
+      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+      // This is a wallet-based dapp with one page and no traditional login,
+      // so we capture pageviews manually rather than relying on history-API
+      // autocapture, which mostly matters for multi-route apps.
+      capture_pageview: false,
+      // Session recordings aren't needed for this scope; keep the footprint
+      // small and rely on named events instead.
+      disable_session_recording: true,
+      persistence: "localStorage+cookie",
+    });
+
+    posthogInstance = posthog;
+  })();
+
+  return initPromise;
 }
 
-/** Track an analytics event. No-ops safely if analytics was never initialized. */
+/**
+ * Track an analytics event. No-ops safely if analytics was never
+ * initialized (no API key configured) or if the posthog-js chunk hasn't
+ * finished loading yet — same fail-safe behavior as before, just also
+ * covering the brief window while the dynamic import is in flight.
+ */
 export function track(event: AnalyticsEventName, properties?: Record<string, unknown>) {
-  if (!initialized) return;
-  posthog.capture(event, properties);
+  posthogInstance?.capture(event, properties);
 }
 
 /**
@@ -69,12 +87,10 @@ export function track(event: AnalyticsEventName, properties?: Record<string, unk
  * exposure beyond what the app already displays.
  */
 export function identifyWallet(address: string) {
-  if (!initialized) return;
-  posthog.identify(address);
+  posthogInstance?.identify(address);
 }
 
 /** Clears the PostHog identity on wallet disconnect. */
 export function resetAnalyticsIdentity() {
-  if (!initialized) return;
-  posthog.reset();
+  posthogInstance?.reset();
 }

@@ -17,17 +17,41 @@ Sentry.init({
   // Performance monitoring sample rate — kept modest for a small app.
   tracesSampleRate: 0.2,
 
-  // Session Replay: only record a small sample of normal sessions, but
-  // always record a replay when an error actually happens — this is what
-  // makes "runtime errors" and "React errors" actionable in Sentry instead
-  // of just a stack trace with no context.
+  // Session Replay sampling config lives here even though the Replay
+  // integration itself is loaded lazily below — these rates take effect
+  // as soon as the integration is added.
   replaysSessionSampleRate: 0.05,
   replaysOnErrorSampleRate: 1.0,
 
-  integrations: [Sentry.replayIntegration()],
-
+  // No `integrations` array here on purpose — see loadReplayLazily() below.
+  // Runtime error / unhandled exception / React error capture (the actual
+  // core purpose of Sentry) doesn't depend on Replay and is fully active
+  // from this Sentry.init() call regardless.
   debug: false,
 });
+
+/**
+ * Loads Sentry's Session Replay integration after the page has settled,
+ * instead of bundling it into the initial script. Measured directly:
+ * @sentry/replay's source is ~304KB raw across its files — a meaningful
+ * chunk of JS for a feature that's only useful retroactively (showing what
+ * happened before/during an error) and has zero bearing on whether errors
+ * get captured in the first place. Deferring it means it never competes
+ * with the initial bundle for parse/hydration time.
+ *
+ * Called from AnalyticsProvider once, client-side only.
+ */
+export function loadReplayLazily() {
+  const schedule =
+    typeof window.requestIdleCallback === "function"
+      ? window.requestIdleCallback
+      : (cb: () => void) => setTimeout(cb, 2000); // Safari has no requestIdleCallback
+
+  schedule(async () => {
+    const { replayIntegration } = await import("@sentry/nextjs");
+    Sentry.addIntegration(replayIntegration());
+  });
+}
 
 // Next.js App Router hook: reports errors that occur during client-side
 // navigation transitions (a case regular React error boundaries don't

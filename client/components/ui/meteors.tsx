@@ -1,14 +1,14 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 
 interface MeteorsProps {
   number?: number;
   className?: string;
 }
 
-export function Meteors({ number = 15, className }: MeteorsProps) {
+function MeteorsImpl({ number = 15, className }: MeteorsProps) {
   const meteors = useMemo(
     () =>
       Array.from({ length: number }, (_, i) => ({
@@ -40,3 +40,5 @@ export function Meteors({ number = 15, className }: MeteorsProps) {
     </>
   );
 }
+
+export const Meteors = memo(MeteorsImpl);

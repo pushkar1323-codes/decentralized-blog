@@ -20,7 +20,4 @@ export default withSentryConfig(nextConfig, {
   // Upload a broader set of source maps for better stack traces, at the
   // cost of a slightly larger build-time upload.
   widenClientFileUpload: true,
-
-  // Avoid noisy source-map-related warnings when no auth token is set.
-  disableLogger: true,
 });
