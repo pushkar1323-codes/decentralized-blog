@@ -1,7 +1,5 @@
 <div align="center">
 
-<img width="1920" height="1080" alt="BlogChain — decentralized blogging on Stellar Soroban" src="https://github.com/user-attachments/assets/7420bad3-d007-4fdb-957c-0f476c1e423a" />
-
 # BlogChain
 
 **A decentralized blog with no backend, no database, and no admin key —
@@ -67,7 +65,8 @@ rather than claimed here.
 <img width="1920" height="1080" alt="Soroban contract on Stellar Expert" src="https://github.com/user-attachments/assets/7420bad3-d007-4fdb-957c-0f476c1e423a" />
 
 **BlogChain UI**
-<img width="1920" height="1080" alt="BlogChain application UI" src="https://github.com/user-attachments/assets/241576d6-35ce-4f67-84b3-a36aef3a8f94" />
+<img width="1917" height="1078" alt="image" src="https://github.com/user-attachments/assets/c896ae7b-8afb-4135-a780-9351a0dfda48" />
+
 
 </div>
 
