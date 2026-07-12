@@ -117,7 +117,7 @@ export default function Navbar({
             <span className="text-base font-semibold tracking-tight text-white">
               Decentralized Blog
             </span>
-            <span className="hidden sm:inline-block text-[10px] font-mono text-white/20 border border-white/[0.06] rounded px-1.5 py-0.5">
+            <span className="hidden sm:inline-block text-[10px] font-mono text-white/45 border border-white/[0.06] rounded px-1.5 py-0.5">
               v1.0
             </span>
           </div>
@@ -150,7 +150,7 @@ export default function Navbar({
                 </span>
                 <svg
                   width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                  className={`text-white/30 transition-transform duration-200 ${showDropdown ? "rotate-180" : ""}`}
+                  className={`text-white/50 transition-transform duration-200 ${showDropdown ? "rotate-180" : ""}`}
                 >
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
@@ -164,7 +164,7 @@ export default function Navbar({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="p-3 border-b border-white/[0.06]">
-                    <p className="text-[10px] uppercase tracking-wider text-white/25 mb-2">
+                    <p className="text-[10px] uppercase tracking-wider text-white/45 mb-2">
                       Connected Wallet
                     </p>
                     <p className="font-mono text-xs text-white/60 break-all leading-relaxed">
@@ -237,7 +237,7 @@ export default function Navbar({
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-[#f87171]/90">{connectError.title}</p>
-                      <p className="text-xs text-white/40 mt-0.5 break-words leading-relaxed">{connectError.message}</p>
+                      <p className="text-xs text-white/55 mt-0.5 break-words leading-relaxed">{connectError.message}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-3">
@@ -249,7 +249,7 @@ export default function Navbar({
                     </button>
                     <button
                       onClick={onDismissConnectError}
-                      className="rounded-lg px-3 py-1.5 text-xs text-white/30 hover:text-white/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+                      className="rounded-lg px-3 py-1.5 text-xs text-white/50 hover:text-white/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
                     >
                       Dismiss
                     </button>

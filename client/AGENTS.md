@@ -1,5 +1,13 @@
 <!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# Notes for AI coding assistants
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This project pins an exact Next.js version in `package.json` — check that
+version (and `REQUIREMENTS.md` at the repo root) before assuming API
+behavior from training data, since Next.js does introduce real breaking
+changes between major versions.
+
+There is no `node_modules/next/dist/docs/` in the real, published Next.js
+package — an earlier version of this file pointed there, which doesn't
+exist. For authoritative API docs, use https://nextjs.org/docs or the
+installed package's own type definitions/source, not a fabricated path.
 <!-- END:nextjs-agent-rules -->

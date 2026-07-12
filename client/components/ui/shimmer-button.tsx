@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 interface ShimmerButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   shimmerColor?: string;
-  shimmerSize?: string;
   borderRadius?: string;
   shimmerDuration?: string;
   background?: string;
@@ -13,8 +12,7 @@ interface ShimmerButtonProps
 
 export function ShimmerButton({
   shimmerColor = "#7c6cf0",
-  shimmerSize = "0.1em",
-  shimmerDuration = "2.5s",
+  shimmerDuration = "4s",
   borderRadius = "12px",
   background = "rgba(0, 0, 0, 0.9)",
   className,
@@ -35,7 +33,10 @@ export function ShimmerButton({
         className="absolute inset-0 overflow-hidden rounded-[inherit]"
         style={{ borderRadius }}
       >
-        <span className="absolute inset-[-100%] animate-[shimmer-spin_4s_linear_infinite]">
+        <span
+          className="absolute inset-[-100%] animate-[shimmer-spin_linear_infinite]"
+          style={{ animationDuration: shimmerDuration }}
+        >
           <span
             className="absolute inset-0"
             style={{

@@ -104,14 +104,14 @@ function Input({
   const inputId = id ?? `field-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="space-y-2">
-      <label htmlFor={inputId} className="block text-[11px] font-medium uppercase tracking-wider text-white/30">
+      <label htmlFor={inputId} className="block text-[11px] font-medium uppercase tracking-wider text-white/50">
         {label}
       </label>
       <div className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-px transition-all focus-within:border-[#7c6cf0]/30 focus-within:shadow-[0_0_20px_rgba(124,108,240,0.08)]">
         <input
           id={inputId}
           {...props}
-          className="w-full rounded-[11px] bg-transparent px-4 py-3 font-mono text-sm text-white/90 placeholder:text-white/15 outline-none"
+          className="w-full rounded-[11px] bg-transparent px-4 py-3 font-mono text-sm text-white/90 placeholder:text-white/55 outline-none"
         />
       </div>
     </div>
@@ -126,7 +126,7 @@ function Textarea({
   const inputId = id ?? `field-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="space-y-2">
-      <label htmlFor={inputId} className="block text-[11px] font-medium uppercase tracking-wider text-white/30">
+      <label htmlFor={inputId} className="block text-[11px] font-medium uppercase tracking-wider text-white/50">
         {label}
       </label>
       <div className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-px transition-all focus-within:border-[#7c6cf0]/30 focus-within:shadow-[0_0_20px_rgba(124,108,240,0.08)]">
@@ -134,7 +134,7 @@ function Textarea({
           id={inputId}
           {...props}
           rows={4}
-          className="w-full rounded-[11px] bg-transparent px-4 py-3 font-mono text-sm text-white/90 placeholder:text-white/15 outline-none resize-none"
+          className="w-full rounded-[11px] bg-transparent px-4 py-3 font-mono text-sm text-white/90 placeholder:text-white/55 outline-none resize-none"
         />
       </div>
     </div>
@@ -187,14 +187,14 @@ const PostCard = memo(function PostCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h4 className="font-medium text-white/90 truncate">{String(post.title)}</h4>
-          <p className="text-sm text-white/40 mt-1 line-clamp-2 leading-relaxed">{String(post.content)}</p>
+          <p className="text-sm text-white/55 mt-1 line-clamp-2 leading-relaxed">{String(post.content)}</p>
         </div>
         <Badge variant="info" className="shrink-0">
           <span className="h-1.5 w-1.5 rounded-full bg-[#4fc3f7]" />
           #{String(post.id)}
         </Badge>
       </div>
-      <div className="flex items-center gap-4 mt-3 text-xs text-white/25">
+      <div className="flex items-center gap-4 mt-3 text-xs text-white/45">
         <span className="flex items-center gap-1.5">
           <UserIcon />
           {truncateAddress(String(post.author))}
@@ -225,7 +225,7 @@ const CommentItem = memo(function CommentItem({ comment }: { comment: Comment })
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xs font-medium text-white/50">{truncateAddress(author)}</span>
-          <span className="text-xs text-white/20">{timeAgo(String(comment.timestamp))}</span>
+          <span className="text-xs text-white/45">{timeAgo(String(comment.timestamp))}</span>
         </div>
         <p className="text-sm text-white/70 leading-relaxed break-words">{String(comment.content)}</p>
       </div>
@@ -620,14 +620,14 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
               </div>
               <div className="min-w-0">
                 <h3 className="text-sm font-semibold text-white/90">Decentralized Blog</h3>
-                <p className="text-[10px] text-white/25 font-mono mt-0.5 truncate">{truncateAddress(CONTRACT_ADDRESS)}</p>
+                <p className="text-[10px] text-white/45 font-mono mt-0.5 truncate">{truncateAddress(CONTRACT_ADDRESS)}</p>
               </div>
             </div>
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
               aria-label="Refresh posts"
-              className="shrink-0 p-2 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-all disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7c6cf0]/40"
+              className="shrink-0 p-2 rounded-lg text-white/50 hover:text-white/60 hover:bg-white/[0.03] transition-all disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7c6cf0]/40"
             >
               <span className={cn("block", isRefreshing && "animate-spin")}>
                 <RefreshIcon />
@@ -646,7 +646,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                 className={cn(
                   "relative flex items-center gap-2 px-3.5 sm:px-5 py-3.5 text-sm font-medium transition-colors whitespace-nowrap",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#7c6cf0]/40",
-                  activeTab === t.key ? "text-white/90" : "text-white/35 hover:text-white/55"
+                  activeTab === t.key ? "text-white/90" : "text-white/50 hover:text-white/55"
                 )}
               >
                 <span style={activeTab === t.key ? { color: t.color } : undefined}>{t.icon}</span>
@@ -668,7 +668,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
             {/* Feed */}
             {activeTab === "feed" && (
               <div className="space-y-4">
-                <p className="text-xs text-white/30 font-medium uppercase tracking-wider">Latest Posts</p>
+                <p className="text-xs text-white/50 font-medium uppercase tracking-wider">Latest Posts</p>
                 {isLoadingPosts ? (
                   <div className="space-y-3" aria-busy="true" aria-label="Loading posts">
                     <PostCardSkeleton />
@@ -677,11 +677,11 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                   </div>
                 ) : posts.length === 0 ? (
                   <div className="flex flex-col items-center py-12 text-center">
-                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.03] border border-white/[0.06] text-white/20">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.03] border border-white/[0.06] text-white/45">
                       <PenIcon />
                     </div>
-                    <p className="text-white/40 text-sm">No posts yet</p>
-                    <p className="text-white/20 text-xs mt-1">Be the first to write something!</p>
+                    <p className="text-white/55 text-sm">No posts yet</p>
+                    <p className="text-white/45 text-xs mt-1">Be the first to write something!</p>
                     <button
                       onClick={() => setActiveTab("write")}
                       className="mt-4 text-xs font-medium text-[#7c6cf0]/70 hover:text-[#7c6cf0] transition-colors focus-visible:outline-none focus-visible:underline"
@@ -712,7 +712,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
             {/* Write */}
             {activeTab === "write" && (
               <div className="space-y-5">
-                <p className="text-xs text-white/30 font-medium uppercase tracking-wider">Create New Post</p>
+                <p className="text-xs text-white/50 font-medium uppercase tracking-wider">Create New Post</p>
                 <Input
                   label="Title"
                   value={postTitle}
@@ -720,7 +720,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                   placeholder="Your post title..."
                   maxLength={100}
                 />
-                <p className="text-xs text-white/20 text-right -mt-3">{postTitle.length}/100</p>
+                <p className="text-xs text-white/45 text-right -mt-3">{postTitle.length}/100</p>
                 <Textarea
                   label="Content"
                   value={postContent}
@@ -728,7 +728,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                   placeholder="Write your thoughts..."
                   maxLength={2000}
                 />
-                <p className="text-xs text-white/20 text-right">{postContent.length}/2000</p>
+                <p className="text-xs text-white/45 text-right">{postContent.length}/2000</p>
                 {walletAddress ? (
                   <ShimmerButton
                     onClick={handleCreatePost}
@@ -755,10 +755,10 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
               <div className="space-y-5">
                 {selectedPostId === null ? (
                   <div className="flex flex-col items-center py-12 text-center">
-                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.03] border border-white/[0.06] text-white/20">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.03] border border-white/[0.06] text-white/45">
                       <MessageIcon />
                     </div>
-                    <p className="text-white/40 text-sm">Select a post to view</p>
+                    <p className="text-white/55 text-sm">Select a post to view</p>
                     <button
                       onClick={() => setActiveTab("feed")}
                       className="mt-2 text-xs text-[#4fc3f7]/60 hover:text-[#4fc3f7] transition-colors focus-visible:outline-none focus-visible:underline"
@@ -786,7 +786,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                         </Badge>
                       </div>
                       <p className="text-white/60 text-sm leading-relaxed whitespace-pre-wrap break-words">{String(selectedPost.content)}</p>
-                      <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-white/[0.06] text-xs text-white/25">
+                      <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-white/[0.06] text-xs text-white/45">
                         <span className="flex items-center gap-1.5">
                           <UserIcon />
                           {truncateAddress(String(selectedPost.author))}
@@ -801,7 +801,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                     {/* Comments Section */}
                     <div className="border-t border-white/[0.06] pt-5">
                       <div className="flex items-center justify-between mb-4">
-                        <p className="text-xs text-white/30 font-medium uppercase tracking-wider">
+                        <p className="text-xs text-white/50 font-medium uppercase tracking-wider">
                           Comments ({comments.length})
                         </p>
                       </div>
@@ -825,7 +825,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                           )}
                         </div>
                       ) : comments.length === 0 ? (
-                        <p className="text-xs text-white/30 text-center py-4">No comments yet. Be the first!</p>
+                        <p className="text-xs text-white/50 text-center py-4">No comments yet. Be the first!</p>
                       ) : (
                         <div className="space-y-2 mb-4">
                           {comments.map((comment) => (
@@ -845,11 +845,11 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                               onChange={(e) => setCommentContent(e.target.value)}
                               placeholder="Write a comment..."
                               rows={2}
-                              className="w-full rounded-[11px] bg-transparent px-4 py-3 font-mono text-sm text-white/90 placeholder:text-white/15 outline-none resize-none"
+                              className="w-full rounded-[11px] bg-transparent px-4 py-3 font-mono text-sm text-white/90 placeholder:text-white/55 outline-none resize-none"
                               maxLength={500}
                             />
                           </div>
-                          <p className="text-xs text-white/20 text-right">{commentContent.length}/500</p>
+                          <p className="text-xs text-white/45 text-right">{commentContent.length}/500</p>
                           <ShimmerButton
                             onClick={handleAddComment}
                             disabled={isPostingComment || !commentContent.trim()}
@@ -876,10 +876,10 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                   </>
                 ) : (
                   <div className="flex flex-col items-center py-12 text-center">
-                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.03] border border-white/[0.06] text-white/20">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.03] border border-white/[0.06] text-white/45">
                       <AlertIcon />
                     </div>
-                    <p className="text-white/40 text-sm">
+                    <p className="text-white/55 text-sm">
                       {postNotFound ? "This post doesn't exist or may have been removed." : "Couldn't load this post."}
                     </p>
                     <button
@@ -896,8 +896,8 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
 
           {/* Footer */}
           <div className="border-t border-white/[0.04] px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-            <p className="text-[10px] text-white/15">Decentralized Blog &middot; Soroban</p>
-            <p className="text-[10px] text-white/15">Permissionless &middot; On-chain</p>
+            <p className="text-[10px] text-white/55">Decentralized Blog &middot; Soroban</p>
+            <p className="text-[10px] text-white/55">Permissionless &middot; On-chain</p>
           </div>
         </AnimatedCard>
       </Spotlight>

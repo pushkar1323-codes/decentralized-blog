@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { memo, useMemo } from "react";
+import { memo, useState } from "react";
 
 interface MeteorsProps {
   number?: number;
@@ -9,15 +9,20 @@ interface MeteorsProps {
 }
 
 function MeteorsImpl({ number = 15, className }: MeteorsProps) {
-  const meteors = useMemo(
-    () =>
-      Array.from({ length: number }, (_, i) => ({
-        id: i,
-        left: `${Math.floor(Math.random() * 100)}%`,
-        delay: `${(Math.random() * 5).toFixed(1)}s`,
-        duration: `${(Math.random() * 3 + 2).toFixed(1)}s`,
-      })),
-    [number]
+  // useState's lazy initializer (not useMemo) is the correct tool here:
+  // it's guaranteed to run exactly once per mount no matter how many times
+  // render is invoked, so the impure Math.random() calls stay pure from
+  // React's perspective. useMemo offers no such guarantee — React is
+  // explicitly allowed to re-run a memo callback (e.g. under concurrent
+  // rendering), which would silently reshuffle the meteors on the same
+  // mount and trips the react-hooks/purity lint rule.
+  const [meteors] = useState(() =>
+    Array.from({ length: number }, (_, i) => ({
+      id: i,
+      left: `${Math.floor(Math.random() * 100)}%`,
+      delay: `${(Math.random() * 5).toFixed(1)}s`,
+      duration: `${(Math.random() * 3 + 2).toFixed(1)}s`,
+    }))
   );
 
   return (

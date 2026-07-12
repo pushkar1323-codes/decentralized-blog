@@ -147,7 +147,7 @@ export default function Home() {
       />
 
       {/* Hero + Content */}
-      <main className="relative z-10 flex flex-1 w-full max-w-5xl mx-auto flex-col items-center px-4 sm:px-6 pt-8 sm:pt-10 pb-16">
+      <main id="main-content" className="relative z-10 flex flex-1 w-full max-w-5xl mx-auto flex-col items-center px-4 sm:px-6 pt-8 sm:pt-10 pb-16">
         {/* Hero — compact */}
         <div className="mb-10 text-center animate-fade-in-up">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5 text-sm text-white/50 backdrop-blur-sm">
@@ -167,7 +167,7 @@ export default function Home() {
             </span>
           </h1>
 
-          <p className="mx-auto max-w-lg text-sm sm:text-base leading-relaxed text-white/40">
+          <p className="mx-auto max-w-lg text-sm sm:text-base leading-relaxed text-white/55">
             A permissionless blogging platform where every post and comment lives on-chain — no servers, no gatekeepers, no takedowns.
           </p>
 
@@ -180,7 +180,7 @@ export default function Home() {
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <p className="text-lg sm:text-xl font-bold text-white/90 font-mono">{stat.value}</p>
-                <p className="text-[10px] text-white/30 mt-0.5 uppercase tracking-wider">{stat.label}</p>
+                <p className="text-[10px] text-white/50 mt-0.5 uppercase tracking-wider">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -197,7 +197,7 @@ export default function Home() {
         {/* Footer */}
         <div className="mt-12 flex flex-col items-center gap-4 animate-fade-in">
           {/* Publishing flow */}
-          <div className="flex items-center gap-3 text-xs text-white/20">
+          <div className="flex items-center gap-3 text-xs text-white/45">
             {["Write", "Publish", "Discuss"].map((step, i) => (
               <span key={step} className="flex items-center gap-3">
                 <span className="flex items-center gap-1.5">
@@ -213,14 +213,14 @@ export default function Home() {
                   <span className="font-mono">{step}</span>
                 </span>
                 {i < 2 && (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/10" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/50" aria-hidden="true">
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
                 )}
               </span>
             ))}
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[10px] text-white/15 px-4 text-center">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[10px] text-white/55 px-4 text-center">
             <span>Stellar Network</span>
             <span className="h-2.5 w-px bg-white/10" />
             <span>Freighter Wallet</span>

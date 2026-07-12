@@ -24,7 +24,7 @@ export default function Error({
         </svg>
       </div>
       <p className="text-lg font-semibold text-white/90">Something went wrong</p>
-      <p className="max-w-sm text-sm text-white/40">
+      <p className="max-w-sm text-sm text-white/55">
         We&apos;ve been notified and are looking into it. You can try again, or refresh the page.
       </p>
       <button
