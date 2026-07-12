@@ -20,6 +20,25 @@ import { toFriendlyError } from "@/lib/errorMessages";
 import { track, AnalyticsEvent } from "@/lib/analytics";
 import * as Sentry from "@sentry/nextjs";
 
+// ── Word-count limits ───────────────────────────────────────
+// Soft limits, enforced by word count rather than character count: typing
+// is never blocked mid-keystroke, the counter turns red past the limit,
+// and the submit button disables until the count is back at/under it.
+// Character maxLength below is a much larger backstop (not the UX limit)
+// against someone pasting one giant no-space "word" — the contract itself
+// has no on-chain length validation, so the client is the only guard.
+const MAX_TITLE_WORDS = 15;
+const MAX_CONTENT_WORDS = 300;
+const MAX_COMMENT_WORDS = 80;
+const TITLE_CHAR_BACKSTOP = 1000;
+const CONTENT_CHAR_BACKSTOP = 20000;
+const COMMENT_CHAR_BACKSTOP = 5000;
+
+function countWords(text: string): number {
+  const trimmed = text.trim();
+  return trimmed === "" ? 0 : trimmed.split(/\s+/).length;
+}
+
 // ── Icons ────────────────────────────────────────────────────
 
 function SpinnerIcon() {
@@ -298,6 +317,8 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
   const [postTitle, setPostTitle] = useState("");
   const [postContent, setPostContent] = useState("");
   const [isPosting, setIsPosting] = useState(false);
+  const titleWordCount = countWords(postTitle);
+  const contentWordCount = countWords(postContent);
 
   // View post state
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
@@ -308,6 +329,7 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [commentContent, setCommentContent] = useState("");
+  const commentWordCount = countWords(commentContent);
   // Comments have their own inline error slot, separate from the global
   // toast, so a failed comment fetch doesn't hide a post that loaded fine.
   const [commentsError, setCommentsError] = useState<UIError | null>(null);
@@ -718,21 +740,41 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                   value={postTitle}
                   onChange={(e) => setPostTitle(e.target.value)}
                   placeholder="Your post title..."
-                  maxLength={100}
+                  maxLength={TITLE_CHAR_BACKSTOP}
                 />
-                <p className="text-xs text-white/45 text-right -mt-3">{postTitle.length}/100</p>
+                <p
+                  className={cn(
+                    "text-xs text-right -mt-3",
+                    titleWordCount > MAX_TITLE_WORDS ? "text-red-400" : "text-white/45"
+                  )}
+                >
+                  {titleWordCount}/{MAX_TITLE_WORDS} words
+                </p>
                 <Textarea
                   label="Content"
                   value={postContent}
                   onChange={(e) => setPostContent(e.target.value)}
                   placeholder="Write your thoughts..."
-                  maxLength={2000}
+                  maxLength={CONTENT_CHAR_BACKSTOP}
                 />
-                <p className="text-xs text-white/45 text-right">{postContent.length}/2000</p>
+                <p
+                  className={cn(
+                    "text-xs text-right",
+                    contentWordCount > MAX_CONTENT_WORDS ? "text-red-400" : "text-white/45"
+                  )}
+                >
+                  {contentWordCount}/{MAX_CONTENT_WORDS} words
+                </p>
                 {walletAddress ? (
                   <ShimmerButton
                     onClick={handleCreatePost}
-                    disabled={isPosting || !postTitle.trim() || !postContent.trim()}
+                    disabled={
+                      isPosting ||
+                      !postTitle.trim() ||
+                      !postContent.trim() ||
+                      titleWordCount > MAX_TITLE_WORDS ||
+                      contentWordCount > MAX_CONTENT_WORDS
+                    }
                     shimmerColor="#7c6cf0"
                     className="w-full"
                   >
@@ -846,13 +888,24 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
                               placeholder="Write a comment..."
                               rows={2}
                               className="w-full rounded-[11px] bg-transparent px-4 py-3 font-mono text-sm text-white/90 placeholder:text-white/55 outline-none resize-none"
-                              maxLength={500}
+                              maxLength={COMMENT_CHAR_BACKSTOP}
                             />
                           </div>
-                          <p className="text-xs text-white/45 text-right">{commentContent.length}/500</p>
+                          <p
+                            className={cn(
+                              "text-xs text-right",
+                              commentWordCount > MAX_COMMENT_WORDS ? "text-red-400" : "text-white/45"
+                            )}
+                          >
+                            {commentWordCount}/{MAX_COMMENT_WORDS} words
+                          </p>
                           <ShimmerButton
                             onClick={handleAddComment}
-                            disabled={isPostingComment || !commentContent.trim()}
+                            disabled={
+                              isPostingComment ||
+                              !commentContent.trim() ||
+                              commentWordCount > MAX_COMMENT_WORDS
+                            }
                             shimmerColor="#4fc3f7"
                             className="w-full"
                           >
