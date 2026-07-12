@@ -5,6 +5,7 @@ import {
   Networks,
   TransactionBuilder,
   Keypair,
+  Account,
   xdr,
   Address,
   nativeToScVal,
@@ -135,7 +136,16 @@ export async function callContract(
   onPhase?.("preparing");
 
   const contract = new Contract(CONTRACT_ADDRESS);
-  const account = await server.getAccount(caller);
+
+  // Read-only simulations don't need a real, funded on-chain account — only
+  // a syntactically valid one to build the transaction envelope. Requiring
+  // a real account here (via server.getAccount) meant every read call using
+  // readContract's disposable random keypair failed with "Account not found
+  // on network", regardless of whether the connected wallet was funded.
+  // Real submitted transactions still need a genuine sequence number.
+  const account = sign
+    ? await server.getAccount(caller)
+    : new Account(caller, "0");
 
   const tx = new TransactionBuilder(account, {
     fee: "100",
