@@ -583,6 +583,21 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
     [walletAddress]
   );
 
+  // Search-by-ID: lets someone jump straight to a post without browsing
+  // the feed. Reuses handleSelectPost, so it gets the exact same
+  // loading/not-found/error handling as clicking a post card would.
+  const [searchIdInput, setSearchIdInput] = useState("");
+  const handleSearchById = useCallback(
+    (e?: React.FormEvent) => {
+      e?.preventDefault();
+      const id = Number(searchIdInput);
+      if (!Number.isInteger(id) || id < 1) return;
+      handleSelectPost(id);
+      setSearchIdInput("");
+    },
+    [searchIdInput, handleSelectPost]
+  );
+
   // Recomputed only when `posts` actually changes (new fetch), instead of
   // on every render of this component — e.g. previously, typing a single
   // character into the Write tab's title field would re-run
@@ -795,6 +810,29 @@ export default function ContractUI({ walletAddress, onConnect, isConnecting, con
             {/* View */}
             {activeTab === "view" && (
               <div className="space-y-5">
+                <form onSubmit={handleSearchById} className="flex gap-2">
+                  <div className="flex-1 group rounded-xl border border-white/[0.06] bg-white/[0.02] p-px transition-all focus-within:border-[#4fc3f7]/30 focus-within:shadow-[0_0_20px_rgba(79,195,247,0.08)]">
+                    <label htmlFor="search-post-id" className="sr-only">Jump to post by ID</label>
+                    <input
+                      id="search-post-id"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={searchIdInput}
+                      onChange={(e) => setSearchIdInput(e.target.value.replace(/[^0-9]/g, ""))}
+                      placeholder="Jump to post # (e.g. 4)"
+                      className="w-full rounded-[11px] bg-transparent px-4 py-2.5 font-mono text-sm text-white/90 placeholder:text-white/55 outline-none"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={!searchIdInput || Number(searchIdInput) < 1}
+                    className="shrink-0 rounded-xl border border-[#4fc3f7]/20 bg-[#4fc3f7]/[0.05] px-4 text-sm text-[#4fc3f7]/80 hover:border-[#4fc3f7]/30 hover:bg-[#4fc3f7]/10 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4fc3f7]/40"
+                  >
+                    Go
+                  </button>
+                </form>
+
                 {selectedPostId === null ? (
                   <div className="flex flex-col items-center py-12 text-center">
                     <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.03] border border-white/[0.06] text-white/45">
